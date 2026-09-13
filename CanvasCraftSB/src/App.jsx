@@ -1,9 +1,11 @@
-import { Paintbrush } from "lucide-react";
+import Header from "./Header";
+import MainBody from "./MainBody";
+
 function App() {
   return (
     <>
-      <Paintbrush />
-      <h1 class="text-3xl font-bold underline">Hello world!</h1>
+      <Header />
+      <MainBody />
     </>
   );
 }
