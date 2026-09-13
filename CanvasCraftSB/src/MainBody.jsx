@@ -5,7 +5,7 @@ import ZoomFunctions from "./MainBodyComponents/ZoomFunctions";
 
 function MainBody() {
   return (
-    <main className="">
+    <main className="relative flex h-full w-full flex-1 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-700">
       <DrawingTools />
       <PropertiesBar />
       <WhiteBoard />
@@ -13,4 +13,5 @@ function MainBody() {
     </main>
   );
 }
+
 export default MainBody;
