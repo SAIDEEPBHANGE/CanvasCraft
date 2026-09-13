@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%" style="background-color: #0f172a; font-family: 'Inter', system-ui, -apple-system, sans-serif;">
+  <defs>
+    <!-- Background Glow -->
+    <radialGradient id="bgGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
+    <!-- Canvas Inner Surface -->
+    <linearGradient id="boardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <!-- Draw Stroke Gradient -->
+    <linearGradient id="strokeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <!-- Pen Body Gradient -->
+    <linearGradient id="penGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <!-- Drop Shadows -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.35" />
+    </filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#6366f1" flood-opacity="0.4" />
+    </filter>
+    <!-- Canvas Dot Grid Pattern -->
+    <pattern id="dotGrid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#cbd5e1" opacity="0.6" />
+    </pattern>
+  </defs>
+  <!-- Background Layer -->
+  <rect width="800" height="450" fill="url(#bgGlow)" />
+  <!-- MAIN EMBLEM (Whiteboard + Pen) -->
+  <g transform="translate(130, 65)">
+    <!-- Stand / Easel Legs -->
+    <path d="M 90 280 L 50 330 M 230 280 L 270 330" stroke="#475569" stroke-width="8" stroke-linecap="round" />
+    <path d="M 160 280 L 160 340" stroke="#334155" stroke-width="6" stroke-linecap="round" />
+    <!-- Outer Frame -->
+    <rect x="20" y="20" width="280" height="260" rx="20" fill="#334155" filter="url(#shadow)" />
+    <!-- Whiteboard Surface -->
+    <rect x="28" y="28" width="264" height="244" rx="14" fill="url(#boardGrad)" />
+    <!-- Grid Pattern overlay -->
+    <rect x="28" y="28" width="264" height="244" rx="14" fill="url(#dotGrid)" />
+    <!-- ======================================================== -->
+    <!-- HIDDEN "SB" WATERMARK (Subtle grid overlay) -->
+    <!-- ======================================================== -->
+    <g opacity="0.12">
+      <!-- Hidden 'S' -->
+      <path d="M 85 52 C 60 52, 60 68, 72 74 C 85 80, 85 96, 60 96" 
+            fill="none" 
+            stroke="#64748b" 
+            stroke-width="5" 
+            stroke-linecap="round" />
+      <!-- Hidden 'B' -->
+      <path d="M 100 52 L 100 96 M 100 52 C 120 52, 120 72, 100 72 M 100 72 C 122 72, 122 96, 100 96" 
+            fill="none" 
+            stroke="#64748b" 
+            stroke-width="5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
+    </g>
+    <!-- ======================================================== -->
+    <!-- Drawn Geometric Elements on Canvas -->
+    <path d="M 50 160 C 90 120, 110 200, 160 140 C 190 100, 220 180, 250 110" 
+          fill="none" 
+          stroke="url(#strokeGrad)" 
+          stroke-width="7" 
+          stroke-linecap="round" 
+          filter="url(#glow)" />
+    <!-- Shape Elements (Circle & Square) -->
+    <circle cx="85" cy="85" r="22" fill="none" stroke="#06b6d4" stroke-width="4" stroke-dasharray="6 4" />
+    <rect x="180" y="165" width="40" height="40" rx="8" fill="none" stroke="#10b981" stroke-width="4" />
+    <!-- Cursor Anchor Points -->
+    <circle cx="85" cy="85" r="4" fill="#06b6d4" />
+    <circle cx="160" cy="140" r="4" fill="#ec4899" />
+    <!-- Stylized Drawing Pen / Stylus -->
+    <g transform="translate(210, 60) rotate(-15)">
+      <path d="M 0 0 L 16 -16 L 80 -80 L 96 -64 L 32 0 Z" fill="url(#penGrad)" />
+      <path d="M 0 0 L -12 12 L 16 0 Z" fill="#0f172a" />
+      <circle cx="-10" cy="10" r="2" fill="#ec4899" />
+    </g>
+    <!-- Tray for Markers -->
+    <rect x="80" y="276" width="160" height="8" rx="4" fill="#64748b" />
+    <rect x="100" y="272" width="30" height="5" rx="2" fill="#6366f1" />
+    <rect x="135" y="272" width="30" height="5" rx="2" fill="#ef4444" />
+    <rect x="170" y="272" width="30" height="5" rx="2" fill="#10b981" />
+  </g>
+  <!-- TYPOGRAPHY / BRANDING -->
+  <g transform="translate(470, 215)">
+    <!-- Updated Title to SB -->
+    <text x="0" y="0" font-size="58" font-weight="800" fill="#ffffff" letter-spacing="-1">
+      SB
+    </text>
+    <text x="2" y="38" font-size="22" font-weight="600" fill="#818cf8" letter-spacing="4">
+      WHITEBOARD
+    </text>
+    <g transform="translate(2, 60)">
+      <rect width="135" height="26" rx="13" fill="#1e1b4b" stroke="#4338ca" stroke-width="1" />
+      <text x="67.5" y="17" font-size="11" font-weight="700" fill="#a5b4fc" text-anchor="middle" letter-spacing="1.5">
+        WORKSPACE
+      </text>
+    </g>
+  </g>
+</svg>
