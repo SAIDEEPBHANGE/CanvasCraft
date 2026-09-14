@@ -1,8 +1,11 @@
-import { Undo2, Redo2, Sun, Trash2, Download } from "lucide-react";
+import { Undo2, Redo2, Sun, Trash2, Download, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
 function RightHeader() {
   const iconBtnClass =
     "flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800";
+
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-white/95 p-1 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:gap-1.5 sm:p-1.5">
@@ -35,11 +38,16 @@ function RightHeader() {
       <button
         id="themeToggle"
         type="button"
-        title="Toggle Theme"
+        onClick={toggleTheme}
+        title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         aria-label="Toggle Theme"
         className={iconBtnClass}
       >
-        <Sun className="h-4 w-4" />
+        {theme === "dark" ? (
+          <Sun className="h-4 w-4 text-amber-400 hover:rotate-45 transition-transform" />
+        ) : (
+          <Moon className="h-4 w-4 text-slate-600 hover:-rotate-12 transition-transform" />
+        )}
       </button>
 
       {/* Clear Button (Icon on mobile/fold, text label on sm+) */}
