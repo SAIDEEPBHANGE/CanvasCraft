@@ -62,7 +62,6 @@ function WhiteBoard() {
     }
   }, [editingElement]);
 
-  // Main canvas redraw routine
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -84,7 +83,7 @@ function WhiteBoard() {
       panOffset.y * dpr,
     );
 
-    // 1. Draw committed elements
+    // 1. Draw elements
     elements.forEach((element) => {
       if (editingElement && editingElement.id === element.id) {
         if (element.type === TOOLS.STICKY) {
@@ -95,12 +94,12 @@ function WhiteBoard() {
       renderElement(ctx, element);
     });
 
-    // 2. Draw active in-progress shape
+    // 2. Active element being drawn
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
 
-    // 3. Draw selection box & resize/rotation handles
+    // 3. Selection box
     if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected) {
@@ -144,7 +143,6 @@ function WhiteBoard() {
     redrawCanvas();
   }, [redrawCanvas]);
 
-  // Rotate point into local element coordinate space
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
@@ -200,7 +198,6 @@ function WhiteBoard() {
     return null;
   };
 
-  // Text & Sticky Saving
   const saveTextAndClose = () => {
     if (!editingElement) return;
 
@@ -226,13 +223,11 @@ function WhiteBoard() {
         setSelectedId(newEl.id);
       }
     } else {
-      // If editing an existing element (shape, sticky, or text)
       const isShape =
         editingElement.type === TOOLS.RECTANGLE ||
         editingElement.type === TOOLS.CIRCLE;
 
       if (isShape) {
-        // Shapes keep existing geometry, just update or clear the inner text
         const updated = elements.map((el) =>
           el.id === editingElement.id
             ? { ...el, text: editingElement.text }
@@ -240,7 +235,6 @@ function WhiteBoard() {
         );
         commitToHistory(updated);
       } else {
-        // Pure text elements are removed if emptied
         if (textToSave) {
           const updated = elements.map((el) =>
             el.id === editingElement.id
@@ -265,7 +259,6 @@ function WhiteBoard() {
     setEditingElement(null);
   };
 
-  // Pointer Down
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -310,7 +303,7 @@ function WhiteBoard() {
         return;
       }
 
-      // Element Selection & Moving
+      // Hit-test element selection
       const hit = [...elements]
         .reverse()
         .find((el) => isPointInsideElement(coords, el));
@@ -369,21 +362,7 @@ function WhiteBoard() {
       return;
     }
 
-    // 5. EXISTING ELEMENT INTERCEPTOR
-    // If user clicks on an existing shape (even while a shape tool is active),
-    // select it instead of drawing an accidental micro-shape over it!
-    const hitExisting = [...elements]
-      .reverse()
-      .find((el) => isPointInsideElement(coords, el));
-    if (hitExisting) {
-      setSelectedId(hitExisting.id);
-      setActiveTool(TOOLS.SELECT);
-      setActionState("moving");
-      dragStartRef.current = coords;
-      return;
-    }
-
-    // 6. SHAPES & DRAWING (Only runs on empty canvas space)
+    // 5. SHAPES & DRAWING (Can draw anywhere, including nested within other shapes)
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
@@ -409,14 +388,13 @@ function WhiteBoard() {
     }
   };
 
-  // Pointer Move
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
-    // Update dynamic cursor hovering over handles when in SELECT mode
+    // Cursor update in SELECT mode
     if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected && selected.type !== TOOLS.PENCIL) {
@@ -434,7 +412,7 @@ function WhiteBoard() {
       setCanvasCursor("default");
     }
 
-    // PANNING
+    // Panning
     if (actionState === "panning") {
       setPanOffset({
         x: e.clientX - panStartRef.current.x,
@@ -443,12 +421,11 @@ function WhiteBoard() {
       return;
     }
 
-    // RESIZING
+    // Resizing
     if (actionState === "resizing" && selectedId && initialElementRef.current) {
       const orig = initialElementRef.current;
       const angle = orig.angle || 0;
 
-      // Project delta in unrotated space
       const rad = -angle;
       const rawDx = coords.x - dragStartRef.current.x;
       const rawDy = coords.y - dragStartRef.current.y;
@@ -465,7 +442,6 @@ function WhiteBoard() {
       if (resizeHandle.includes("w")) minX += dx;
       if (resizeHandle.includes("n")) minY += dy;
 
-      // Minimum size guard (20px)
       if (maxX - minX >= 20 && maxY - minY >= 20) {
         setElements((prev) =>
           prev.map((el) =>
@@ -484,7 +460,7 @@ function WhiteBoard() {
       return;
     }
 
-    // ROTATING
+    // Rotating
     if (actionState === "rotating" && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (!selected) return;
@@ -499,7 +475,7 @@ function WhiteBoard() {
       return;
     }
 
-    // MOVING
+    // Moving
     if (actionState === "moving" && selectedId) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
@@ -526,7 +502,7 @@ function WhiteBoard() {
       return;
     }
 
-    // DRAWING
+    // Drawing
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
         setCurrentElement((prev) => ({
@@ -543,10 +519,10 @@ function WhiteBoard() {
     }
   };
 
-  // Pointer Up
   const handlePointerUp = () => {
     if (actionState === "drawing" && currentElement) {
       let isValidShape = true;
+
       if (currentElement.type === TOOLS.PENCIL) {
         isValidShape =
           currentElement.points && currentElement.points.length > 1;
@@ -559,17 +535,18 @@ function WhiteBoard() {
           currentElement.x2 - currentElement.x1,
           currentElement.y2 - currentElement.y1,
         );
-        if (dist < 6) isValidShape = false;
+        if (dist < 6) {
+          isValidShape = false;
+        }
       }
 
       if (isValidShape) {
         commitToHistory([...elements, currentElement]);
         setSelectedId(currentElement.id);
+        setActiveTool(TOOLS.SELECT);
       }
 
       setCurrentElement(null);
-      // Auto-revert to select tool after drawing
-      setActiveTool(TOOLS.SELECT);
     } else if (
       actionState === "moving" ||
       actionState === "rotating" ||
@@ -583,21 +560,17 @@ function WhiteBoard() {
     initialElementRef.current = null;
   };
 
-  // Double click to add or edit text inside ANY shape or note
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
-    // Find the topmost hit element
     const hit = [...elements]
       .reverse()
       .find((el) => isPointInsideElement(coords, el));
 
     if (hit && hit.type !== TOOLS.PENCIL) {
       const bounds = getElementBounds(hit);
-
-      // Determine size of the editor box
       const isShape = hit.type === TOOLS.RECTANGLE || hit.type === TOOLS.CIRCLE;
       const editorWidth = isShape
         ? Math.max(bounds.width * 0.85, 120)
@@ -606,7 +579,6 @@ function WhiteBoard() {
         ? Math.max(bounds.height * 0.6, 50)
         : bounds.height;
 
-      // Position the editor directly in the center of the shape
       const editorX = isShape ? bounds.cx - editorWidth / 2 : bounds.x;
       const editorY = isShape ? bounds.cy - editorHeight / 2 : bounds.y;
 
@@ -619,7 +591,7 @@ function WhiteBoard() {
         text: hit.text || "",
         type: hit.type,
         isNew: false,
-        isEmbedded: isShape, // Flag indicating text is embedded inside a shape
+        isEmbedded: isShape,
       });
       setSelectedId(hit.id);
     }
@@ -642,7 +614,7 @@ function WhiteBoard() {
         className="block h-full w-full touch-none"
       />
 
-      {/* Floating Active Editor */}
+      {/* Inline Editor Overlay */}
       {editingElement && (
         <div
           className="pointer-events-auto absolute z-40 flex flex-col"
@@ -659,9 +631,11 @@ function WhiteBoard() {
             rows={editingElement.type === TOOLS.STICKY ? 5 : 2}
             value={editingElement.text}
             placeholder={
-              editingElement.type === TOOLS.STICKY
-                ? "Write a note..."
-                : "Type text here..."
+              editingElement.isEmbedded
+                ? "Type inside shape..."
+                : editingElement.type === TOOLS.STICKY
+                  ? "Write a note..."
+                  : "Type text here..."
             }
             onChange={(e) => {
               const val = e.target.value;
@@ -672,26 +646,20 @@ function WhiteBoard() {
               saveTextAndClose();
             }}
             onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                editingElement.type === TOOLS.TEXT
-              ) {
-                e.preventDefault();
-                saveTextAndClose();
-              }
               if (e.key === "Escape") {
                 cancelEditing();
               }
             }}
             style={{
-              fontSize: `${(editingElement.type === TOOLS.STICKY ? 14 : 18) * zoom}px`,
+              fontSize: `${(editingElement.type === TOOLS.STICKY ? 14 : 16) * zoom}px`,
               lineHeight: 1.3,
             }}
             className={`w-full resize-none p-2.5 outline-none shadow-lg ${
-              editingElement.type === TOOLS.STICKY
-                ? "rounded-t-lg border-t border-x border-amber-300 bg-[#fef08a] font-sans text-slate-900 placeholder-amber-700/50 focus:ring-2 focus:ring-amber-400"
-                : "rounded-t-md border-2 border-b-0 border-dashed border-indigo-500 bg-white/95 font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
+              editingElement.isEmbedded
+                ? "rounded-t-md border-2 border-b-0 border-dashed border-indigo-400 bg-white/90 text-center font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500"
+                : editingElement.type === TOOLS.STICKY
+                  ? "rounded-t-lg border-t border-x border-amber-300 bg-[#fef08a] font-sans text-slate-900 placeholder-amber-700/50 focus:ring-1 focus:ring-amber-400"
+                  : "rounded-t-md border-2 border-b-0 border-dashed border-indigo-500 bg-white/95 font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
             }`}
           />
 

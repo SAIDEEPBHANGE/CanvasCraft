@@ -20,8 +20,8 @@ export const DEFAULT_COLORS = [
 ];
 
 export const ZOOM_CONFIG = {
-  MIN: 0.1, // 10%
-  MAX: 5.0, // 500%
+  MIN: 0.1,
+  MAX: 5.0,
   STEP: 0.1,
   DEFAULT: 1.0,
 };

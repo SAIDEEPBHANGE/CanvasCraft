@@ -15,12 +15,10 @@ export function CanvasProvider({ children }) {
   const [history, setHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(0);
 
-  // Selected element ID
   const [selectedId, setSelectedId] = useState(null);
-
   const canvasRef = useRef(null);
 
-  // Layering: Bring Forward
+  // Layering
   const bringForward = (id) => {
     setElements((prev) => {
       const idx = prev.findIndex((el) => el.id === id);
@@ -32,7 +30,6 @@ export function CanvasProvider({ children }) {
     });
   };
 
-  // Layering: Send Backward
   const sendBackward = (id) => {
     setElements((prev) => {
       const idx = prev.findIndex((el) => el.id === id);
@@ -44,6 +41,7 @@ export function CanvasProvider({ children }) {
     });
   };
 
+  // Undo / Redo / Clear
   const undo = () => {
     if (historyStep > 0) {
       setHistoryStep((prev) => prev - 1);
@@ -67,6 +65,7 @@ export function CanvasProvider({ children }) {
     setSelectedId(null);
   };
 
+  // Zoom
   const zoomIn = () => {
     setZoom((prev) =>
       Math.min(Number((prev + ZOOM_CONFIG.STEP).toFixed(2)), ZOOM_CONFIG.MAX),

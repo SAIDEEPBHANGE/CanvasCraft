@@ -54,7 +54,7 @@ export function getElementBounds(element) {
 }
 
 /**
- * Returns positions of all 8 resize handles in unrotated local bounding space
+ * Returns positions of 8 resize handles in unrotated local coordinate space
  */
 export function getResizeHandles(element, padding = 6) {
   const bounds = getElementBounds(element);
@@ -85,7 +85,7 @@ function drawCardRect(ctx, x, y, width, height, radius = 6) {
 }
 
 /**
- * Draws the bounding box, 8 resize handles, and rotation stem
+ * Draws the bounding box, 8 resize handles, and rotation handle
  */
 export function renderSelectionBox(ctx, element) {
   const bounds = getElementBounds(element);
@@ -104,7 +104,7 @@ export function renderSelectionBox(ctx, element) {
   const w = bounds.width + padding * 2;
   const h = bounds.height + padding * 2;
 
-  // Bounding dashed box
+  // Dashed outline
   ctx.strokeStyle = "#6366f1";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 4]);
@@ -155,7 +155,56 @@ export function renderSelectionBox(ctx, element) {
 }
 
 /**
- * Renders an individual element
+ * Renders centered, auto-wrapping text inside rectangle or circle shapes
+ */
+function renderCenteredShapeText(ctx, element, bounds) {
+  if (!element.text) return;
+
+  const isDark = document.documentElement.classList.contains("dark");
+  let textColor = element.strokeColor || "#000000";
+  if (isDark && (textColor === "#000000" || textColor === "#000")) {
+    textColor = "#f8fafc";
+  }
+
+  ctx.fillStyle = textColor;
+  ctx.font = "15px 'Inter', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const padding = 12;
+  const maxWidth = Math.max(bounds.width - padding * 2, 20);
+  const lineHeight = 20;
+
+  const paragraphs = element.text.split("\n");
+  const lines = [];
+
+  for (const para of paragraphs) {
+    const words = para.split(" ");
+    let currentLine = "";
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = currentLine ? `${currentLine} ${words[n]}` : words[n];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        lines.push(currentLine);
+        currentLine = words[n];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine);
+  }
+
+  const totalHeight = lines.length * lineHeight;
+  const startY = bounds.cy - totalHeight / 2 + lineHeight / 2;
+
+  lines.forEach((line, index) => {
+    ctx.fillText(line, bounds.cx, startY + index * lineHeight);
+  });
+}
+
+/**
+ * Main render function for canvas elements
  */
 export function renderElement(ctx, element) {
   const { type, strokeColor, strokeWidth, angle = 0 } = element;
@@ -216,7 +265,6 @@ export function renderElement(ctx, element) {
       ctx.moveTo(element.x1, element.y1);
       ctx.lineTo(element.x2, element.y2);
       ctx.stroke();
-      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -226,7 +274,6 @@ export function renderElement(ctx, element) {
       ctx.lineTo(element.x2, element.y2);
       ctx.stroke();
       drawArrowhead(ctx, element.x1, element.y1, element.x2, element.y2);
-      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -250,6 +297,7 @@ export function renderElement(ctx, element) {
         ctx.fillStyle = "#1e293b";
         ctx.font = "14px 'Inter', sans-serif";
         ctx.textBaseline = "top";
+        ctx.textAlign = "left";
 
         const padding = 12;
         const maxWidth = bounds.width - padding * 2;
@@ -290,6 +338,7 @@ export function renderElement(ctx, element) {
         ctx.fillStyle = textColor;
         ctx.font = "18px 'Inter', sans-serif";
         ctx.textBaseline = "top";
+        ctx.textAlign = "left";
 
         const lines = element.text.split("\n");
         lines.forEach((line, i) => {
@@ -304,52 +353,4 @@ export function renderElement(ctx, element) {
   }
 
   ctx.restore();
-}
-/**
- * Helper to render auto-wrapped text centered inside a shape's bounding box
- */
-function renderCenteredShapeText(ctx, element, bounds) {
-  if (!element.text) return;
-
-  const isDark = document.documentElement.classList.contains("dark");
-  let textColor = element.strokeColor || "#000000";
-  if (isDark && (textColor === "#000000" || textColor === "#000")) {
-    textColor = "#f8fafc";
-  }
-
-  ctx.fillStyle = textColor;
-  ctx.font = "15px 'Inter', sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  const padding = 12;
-  const maxWidth = Math.max(bounds.width - padding * 2, 20);
-  const lineHeight = 20;
-
-  const paragraphs = element.text.split("\n");
-  const lines = [];
-
-  for (const para of paragraphs) {
-    const words = para.split(" ");
-    let currentLine = "";
-
-    for (let n = 0; n < words.length; n++) {
-      const testLine = currentLine ? `${currentLine} ${words[n]}` : words[n];
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
-        lines.push(currentLine);
-        currentLine = words[n];
-      } else {
-        currentLine = testLine;
-      }
-    }
-    lines.push(currentLine);
-  }
-
-  const totalHeight = lines.length * lineHeight;
-  const startY = bounds.cy - totalHeight / 2 + lineHeight / 2;
-
-  lines.forEach((line, index) => {
-    ctx.fillText(line, bounds.cx, startY + index * lineHeight);
-  });
 }
