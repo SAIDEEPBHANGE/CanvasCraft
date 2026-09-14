@@ -7,6 +7,7 @@ import {
   renderSelectionBox,
   getElementBounds,
 } from "../utils/drawing";
+import { Check, X } from "lucide-react";
 
 function WhiteBoard() {
   const {
@@ -26,12 +27,14 @@ function WhiteBoard() {
     canvasRef,
   } = useCanvas();
 
-  const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "panning"
+  const [actionState, setActionState] = useState("none");
   const [currentElement, setCurrentElement] = useState(null);
-  const [editingText, setEditingText] = useState(null); // { id, x, y, width, height, text, type, isNew }
+  const [editingElement, setEditingElement] = useState(null);
 
   const dragStartRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
+  const textareaRef = useRef(null);
+  const openTimeRef = useRef(0);
 
   const commitToHistory = useCallback(
     (newElements) => {
@@ -45,7 +48,20 @@ function WhiteBoard() {
     [setElements, setHistory, setHistoryStep],
   );
 
-  // Redraw canvas
+  // Focus textarea safely
+  useEffect(() => {
+    if (editingElement && textareaRef.current) {
+      openTimeRef.current = Date.now();
+      const timer = setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [editingElement]);
+
+  // Main canvas redraw routine
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -67,26 +83,24 @@ function WhiteBoard() {
       panOffset.y * dpr,
     );
 
-    // Render all elements
+    // 1. Draw committed elements
     elements.forEach((element) => {
-      // Don't render element text on canvas if it's currently being edited in textarea
-      if (
-        editingText &&
-        editingText.id === element.id &&
-        editingText.type === TOOLS.TEXT
-      ) {
+      if (editingElement && editingElement.id === element.id) {
+        if (element.type === TOOLS.STICKY) {
+          renderElement(ctx, { ...element, text: "" });
+        }
         return;
       }
       renderElement(ctx, element);
     });
 
-    // Render in-progress drawing element
+    // 2. Draw active shape preview
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
 
-    // Render selection & rotation handle
-    if (selectedId && activeTool === TOOLS.SELECT) {
+    // 3. Draw selection handles
+    if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected) {
         renderSelectionBox(ctx, selected);
@@ -100,7 +114,7 @@ function WhiteBoard() {
     activeTool,
     zoom,
     panOffset,
-    editingText,
+    editingElement,
   ]);
 
   useEffect(() => {
@@ -129,7 +143,6 @@ function WhiteBoard() {
     redrawCanvas();
   }, [redrawCanvas]);
 
-  // Rotates point around center for accurate selection check
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
@@ -172,14 +185,60 @@ function WhiteBoard() {
     return Math.hypot(handleX - local.x, handleY - local.y) < 12 / zoom;
   };
 
+  // Safe commit function
+  const saveTextAndClose = () => {
+    if (!editingElement) return;
+
+    const textToSave = editingElement.text.trim();
+
+    if (textToSave) {
+      if (editingElement.isNew) {
+        const newEl = {
+          id: editingElement.id,
+          type: editingElement.type,
+          x1: editingElement.x,
+          y1: editingElement.y,
+          x2: editingElement.x + editingElement.width,
+          y2: editingElement.y + editingElement.height,
+          text: editingElement.text,
+          strokeColor:
+            editingElement.type === TOOLS.STICKY ? "#facc15" : strokeColor,
+          strokeWidth: 1,
+          bgColor: editingElement.type === TOOLS.STICKY ? "#fef08a" : undefined,
+          angle: 0,
+        };
+        commitToHistory([...elements, newEl]);
+        setSelectedId(newEl.id);
+      } else {
+        const updated = elements.map((el) =>
+          el.id === editingElement.id
+            ? { ...el, text: editingElement.text }
+            : el,
+        );
+        commitToHistory(updated);
+      }
+    } else if (!editingElement.isNew) {
+      // If an existing note was completely cleared, remove it
+      const remaining = elements.filter((el) => el.id !== editingElement.id);
+      commitToHistory(remaining);
+      setSelectedId(null);
+    }
+
+    setEditingElement(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingElement(null);
+  };
+
   // Pointer Down
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // If typing in a note and user clicks outside, finish edit first
-    if (editingText) {
-      finishTextEditing();
+    // If an editor is active and you tap canvas, save it
+    if (editingElement) {
+      saveTextAndClose();
       return;
     }
 
@@ -231,77 +290,39 @@ function WhiteBoard() {
       return;
     }
 
-    // 3. STICKY NOTE (Instantly creates note & opens editor)
+    // 3. STICKY NOTE CREATION
     if (activeTool === TOOLS.STICKY) {
-      const noteWidth = 180;
-      const noteHeight = 160;
-      const newNote = {
+      setEditingElement({
         id: Date.now(),
-        type: TOOLS.STICKY,
-        x1: coords.x,
-        y1: coords.y,
-        x2: coords.x + noteWidth,
-        y2: coords.y + noteHeight,
-        text: "",
-        bgColor: "#fef08a",
-        strokeColor: "#facc15",
-        strokeWidth: 1,
-        angle: 0,
-      };
-
-      // Add to elements and immediately start editing
-      const updated = [...elements, newNote];
-      commitToHistory(updated);
-      setSelectedId(newNote.id);
-
-      setEditingText({
-        id: newNote.id,
         x: coords.x,
         y: coords.y,
-        width: noteWidth,
-        height: noteHeight,
+        width: 180,
+        height: 150,
         text: "",
         type: TOOLS.STICKY,
+        isNew: true,
       });
-
-      // Switch back to select tool so dragging works right after
       setActiveTool(TOOLS.SELECT);
       return;
     }
 
-    // 4. PLAIN TEXT
+    // 4. TEXT CREATION
     if (activeTool === TOOLS.TEXT) {
-      const textWidth = 200;
-      const textHeight = 40;
-      const newText = {
+      setEditingElement({
         id: Date.now(),
-        type: TOOLS.TEXT,
-        x1: coords.x,
-        y1: coords.y,
-        x2: coords.x + textWidth,
-        y2: coords.y + textHeight,
-        text: "",
-        strokeColor,
-        strokeWidth,
-        angle: 0,
-      };
-
-      setEditingText({
-        id: newText.id,
         x: coords.x,
         y: coords.y,
-        width: textWidth,
-        height: textHeight,
+        width: 220,
+        height: 48,
         text: "",
         type: TOOLS.TEXT,
         isNew: true,
       });
-
       setActiveTool(TOOLS.SELECT);
       return;
     }
 
-    // 5. SHAPES & FREEHAND
+    // 5. SHAPES & DRAWING
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
@@ -342,7 +363,6 @@ function WhiteBoard() {
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
-    // ROTATION
     if (actionState === "rotating" && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (!selected) return;
@@ -357,7 +377,6 @@ function WhiteBoard() {
       return;
     }
 
-    // MOVE ELEMENT
     if (actionState === "moving" && selectedId) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
@@ -384,7 +403,6 @@ function WhiteBoard() {
       return;
     }
 
-    // IN-PROGRESS DRAWING
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
         setCurrentElement((prev) => ({
@@ -412,7 +430,7 @@ function WhiteBoard() {
     setActionState("none");
   };
 
-  // Double click to edit sticky note or text
+  // Double click to edit text or sticky
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -424,7 +442,7 @@ function WhiteBoard() {
 
     if (hit && (hit.type === TOOLS.STICKY || hit.type === TOOLS.TEXT)) {
       const bounds = getElementBounds(hit);
-      setEditingText({
+      setEditingElement({
         id: hit.id,
         x: bounds.x,
         y: bounds.y,
@@ -432,40 +450,10 @@ function WhiteBoard() {
         height: bounds.height,
         text: hit.text || "",
         type: hit.type,
+        isNew: false,
       });
+      setSelectedId(hit.id);
     }
-  };
-
-  // Save Text / Sticky Note changes
-  const finishTextEditing = () => {
-    if (!editingText) return;
-
-    if (editingText.isNew) {
-      if (editingText.text.trim()) {
-        const newEl = {
-          id: editingText.id,
-          type: editingText.type,
-          x1: editingText.x,
-          y1: editingText.y,
-          x2: editingText.x + editingText.width,
-          y2: editingText.y + editingText.height,
-          text: editingText.text,
-          strokeColor,
-          strokeWidth,
-          angle: 0,
-        };
-        commitToHistory([...elements, newEl]);
-      }
-    } else {
-      const updated = elements
-        .map((el) =>
-          el.id === editingText.id ? { ...el, text: editingText.text } : el,
-        )
-        .filter((el) => el.type !== TOOLS.TEXT || el.text.trim() !== ""); // Delete blank text
-      commitToHistory(updated);
-    }
-
-    setEditingText(null);
   };
 
   return (
@@ -484,53 +472,86 @@ function WhiteBoard() {
         className="block h-full w-full touch-none"
       />
 
-      {/* Floating Active Note Editor */}
-      {editingText && (
+      {/* Floating Active Editor */}
+      {editingElement && (
         <div
-          className="pointer-events-auto absolute z-30"
+          className="pointer-events-auto absolute z-40 flex flex-col"
           style={{
-            left: `${editingText.x * zoom + panOffset.x}px`,
-            top: `${editingText.y * zoom + panOffset.y}px`,
-            width: `${editingText.width * zoom}px`,
-            height: `${editingText.height * zoom}px`,
+            left: `${editingElement.x * zoom + panOffset.x}px`,
+            top: `${editingElement.y * zoom + panOffset.y}px`,
+            width: `${editingElement.width * zoom}px`,
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <textarea
-            autoFocus
-            value={editingText.text}
+            ref={textareaRef}
+            rows={editingElement.type === TOOLS.STICKY ? 5 : 2}
+            value={editingElement.text}
             placeholder={
-              editingText.type === TOOLS.STICKY
+              editingElement.type === TOOLS.STICKY
                 ? "Write a note..."
-                : "Type here..."
+                : "Type text here..."
             }
-            onChange={(e) =>
-              setEditingText((prev) => ({ ...prev, text: e.target.value }))
-            }
-            onBlur={finishTextEditing}
+            onChange={(e) => {
+              const val = e.target.value;
+              setEditingElement((prev) => ({ ...prev, text: val }));
+            }}
+            onBlur={() => {
+              // Ignore blur that happens within the first 400ms of opening
+              if (Date.now() - openTimeRef.current < 400) return;
+              saveTextAndClose();
+            }}
             onKeyDown={(e) => {
               if (
                 e.key === "Enter" &&
                 !e.shiftKey &&
-                editingText.type === TOOLS.TEXT
+                editingElement.type === TOOLS.TEXT
               ) {
                 e.preventDefault();
-                finishTextEditing();
+                saveTextAndClose();
               }
               if (e.key === "Escape") {
-                finishTextEditing();
+                cancelEditing();
               }
             }}
             style={{
-              fontSize: `${(editingText.type === TOOLS.STICKY ? 14 : 16) * zoom}px`,
+              fontSize: `${(editingElement.type === TOOLS.STICKY ? 14 : 18) * zoom}px`,
               lineHeight: 1.3,
             }}
-            className={`h-full w-full resize-none rounded-lg p-2.5 outline-none transition-shadow ${
-              editingText.type === TOOLS.STICKY
-                ? "border border-amber-300 bg-[#fef08a] font-sans text-slate-900 shadow-xl placeholder-amber-700/50 focus:ring-2 focus:ring-amber-400"
-                : "border border-indigo-400 bg-transparent font-sans text-slate-900 shadow-sm dark:text-slate-100"
+            className={`w-full resize-none p-2.5 outline-none shadow-lg ${
+              editingElement.type === TOOLS.STICKY
+                ? "rounded-t-lg border-t border-x border-amber-300 bg-[#fef08a] font-sans text-slate-900 placeholder-amber-700/50 focus:ring-1 focus:ring-amber-400"
+                : "rounded-t-md border-2 border-b-0 border-dashed border-indigo-500 bg-white/95 font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
             }`}
           />
+
+          {/* Explicit Save / Done Toolbar Bar */}
+          <div
+            className={`flex items-center justify-end gap-1.5 px-2 py-1 shadow-md ${
+              editingElement.type === TOOLS.STICKY
+                ? "rounded-b-lg border-b border-x border-amber-300 bg-amber-200/90"
+                : "rounded-b-md border-2 border-t-0 border-dashed border-indigo-500 bg-slate-100 dark:bg-slate-800"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={cancelEditing}
+              title="Cancel (Esc)"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-black/10 dark:text-slate-400"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={saveTextAndClose}
+              title="Save"
+              className="flex h-6 items-center gap-1 rounded bg-indigo-600 px-2 text-[11px] font-semibold text-white hover:bg-indigo-700"
+            >
+              <Check className="h-3 w-3" />
+              Done
+            </button>
+          </div>
         </div>
       )}
     </div>
