@@ -1,10 +1,17 @@
-import { Plus } from "lucide-react";
+import { Plus, BringToFront, SendToBack } from "lucide-react";
 import { useCanvas } from "../context/CanvasContext";
 import { DEFAULT_COLORS, STROKE_CONFIG } from "../utils/constants";
 
 function PropertiesBar() {
-  const { strokeColor, setStrokeColor, strokeWidth, setStrokeWidth } =
-    useCanvas();
+  const {
+    strokeColor,
+    setStrokeColor,
+    strokeWidth,
+    setStrokeWidth,
+    selectedId,
+    bringForward,
+    sendBackward,
+  } = useCanvas();
 
   return (
     <aside
@@ -12,7 +19,7 @@ function PropertiesBar() {
       aria-label="Properties"
       className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/95 px-2.5 py-1.5 shadow-md backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 lg:absolute lg:top-16 lg:left-3 lg:flex-col lg:items-start lg:p-3"
     >
-      {/* Color Palette */}
+      {/* Colors */}
       <div className="flex items-center gap-1.5 lg:flex-col lg:items-start lg:gap-1.5">
         <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 lg:inline">
           Stroke
@@ -31,7 +38,6 @@ function PropertiesBar() {
             />
           ))}
 
-          {/* Native Color Picker */}
           <label
             className={`relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed text-slate-500 transition-colors ${
               !DEFAULT_COLORS.includes(strokeColor)
@@ -77,6 +83,31 @@ function PropertiesBar() {
           className="h-1.5 w-14 cursor-pointer accent-indigo-600 dark:accent-indigo-400 sm:w-20 lg:w-32"
         />
       </div>
+
+      {/* Layering Controls (Appears when an element is selected) */}
+      {selectedId && (
+        <>
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 lg:my-1 lg:h-px lg:w-full" />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => bringForward(selectedId)}
+              title="Bring Forward"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              <BringToFront className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => sendBackward(selectedId)}
+              title="Send Backward"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              <SendToBack className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

@@ -4,28 +4,51 @@ import { TOOLS, STROKE_CONFIG, ZOOM_CONFIG } from "../utils/constants";
 const CanvasContext = createContext();
 
 export function CanvasProvider({ children }) {
-  // Tool & styling state
   const [activeTool, setActiveTool] = useState(TOOLS.SELECT);
   const [strokeColor, setStrokeColor] = useState(STROKE_CONFIG.DEFAULT_COLOR);
   const [strokeWidth, setStrokeWidth] = useState(STROKE_CONFIG.DEFAULT_WIDTH);
 
-  // Viewport camera state
   const [zoom, setZoom] = useState(ZOOM_CONFIG.DEFAULT);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
-  // History & drawn elements
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(0);
 
-  // Reference to the underlying canvas DOM node
+  // Selected element ID
+  const [selectedId, setSelectedId] = useState(null);
+
   const canvasRef = useRef(null);
 
-  // Undo / Redo actions
+  // Layering: Bring Forward
+  const bringForward = (id) => {
+    setElements((prev) => {
+      const idx = prev.findIndex((el) => el.id === id);
+      if (idx < 0 || idx === prev.length - 1) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(idx, 1);
+      copy.splice(idx + 1, 0, item);
+      return copy;
+    });
+  };
+
+  // Layering: Send Backward
+  const sendBackward = (id) => {
+    setElements((prev) => {
+      const idx = prev.findIndex((el) => el.id === id);
+      if (idx <= 0) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(idx, 1);
+      copy.splice(idx - 1, 0, item);
+      return copy;
+    });
+  };
+
   const undo = () => {
     if (historyStep > 0) {
       setHistoryStep((prev) => prev - 1);
       setElements(history[historyStep - 1] || []);
+      setSelectedId(null);
     }
   };
 
@@ -33,6 +56,7 @@ export function CanvasProvider({ children }) {
     if (historyStep < history.length - 1) {
       setHistoryStep((prev) => prev + 1);
       setElements(history[historyStep + 1] || []);
+      setSelectedId(null);
     }
   };
 
@@ -40,9 +64,9 @@ export function CanvasProvider({ children }) {
     setElements([]);
     setHistory([]);
     setHistoryStep(0);
+    setSelectedId(null);
   };
 
-  // Zoom helpers
   const zoomIn = () => {
     setZoom((prev) =>
       Math.min(Number((prev + ZOOM_CONFIG.STEP).toFixed(2)), ZOOM_CONFIG.MAX),
@@ -79,6 +103,10 @@ export function CanvasProvider({ children }) {
         setHistory,
         historyStep,
         setHistoryStep,
+        selectedId,
+        setSelectedId,
+        bringForward,
+        sendBackward,
         canvasRef,
         undo,
         redo,
