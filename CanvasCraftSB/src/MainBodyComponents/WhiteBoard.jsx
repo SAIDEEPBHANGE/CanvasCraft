@@ -11,6 +11,7 @@ import {
 function WhiteBoard() {
   const {
     activeTool,
+    setActiveTool,
     strokeColor,
     strokeWidth,
     zoom,
@@ -27,7 +28,7 @@ function WhiteBoard() {
 
   const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "panning"
   const [currentElement, setCurrentElement] = useState(null);
-  const [textInput, setTextInput] = useState(null); // { id, x, y, value, type }
+  const [editingText, setEditingText] = useState(null); // { id, x, y, width, height, text, type, isNew }
 
   const dragStartRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
@@ -44,7 +45,7 @@ function WhiteBoard() {
     [setElements, setHistory, setHistoryStep],
   );
 
-  // Redraw canvas buffer
+  // Redraw canvas
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -66,17 +67,25 @@ function WhiteBoard() {
       panOffset.y * dpr,
     );
 
-    // 1. Render all layered elements (bottom-to-top)
+    // Render all elements
     elements.forEach((element) => {
+      // Don't render element text on canvas if it's currently being edited in textarea
+      if (
+        editingText &&
+        editingText.id === element.id &&
+        editingText.type === TOOLS.TEXT
+      ) {
+        return;
+      }
       renderElement(ctx, element);
     });
 
-    // 2. Render element currently being drawn
+    // Render in-progress drawing element
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
 
-    // 3. Render selection bounding box & rotation handle
+    // Render selection & rotation handle
     if (selectedId && activeTool === TOOLS.SELECT) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected) {
@@ -91,6 +100,7 @@ function WhiteBoard() {
     activeTool,
     zoom,
     panOffset,
+    editingText,
   ]);
 
   useEffect(() => {
@@ -119,7 +129,7 @@ function WhiteBoard() {
     redrawCanvas();
   }, [redrawCanvas]);
 
-  // Rotates point around center in opposite direction for accurate hit testing
+  // Rotates point around center for accurate selection check
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
@@ -135,7 +145,6 @@ function WhiteBoard() {
     };
   };
 
-  // Hit test single element
   const isPointInsideElement = (point, element) => {
     const local = toLocalCoords(point, element);
     const bounds = getElementBounds(element);
@@ -155,19 +164,24 @@ function WhiteBoard() {
     );
   };
 
-  // Check if click hits the rotation handle
   const isOverRotationHandle = (point, element) => {
     const local = toLocalCoords(point, element);
     const bounds = getElementBounds(element);
     const handleY = bounds.y - 6 - 22;
     const handleX = bounds.cx;
-    return Math.hypot(handleX - local.x, handleY - local.y) < 10 / zoom;
+    return Math.hypot(handleX - local.x, handleY - local.y) < 12 / zoom;
   };
 
   // Pointer Down
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // If typing in a note and user clicks outside, finish edit first
+    if (editingText) {
+      finishTextEditing();
+      return;
+    }
 
     if (activeTool === TOOLS.PAN || e.button === 1) {
       setActionState("panning");
@@ -182,7 +196,7 @@ function WhiteBoard() {
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
-    // 1. SELECT TOOL: Rotate, Drag, or Select
+    // 1. SELECT TOOL
     if (activeTool === TOOLS.SELECT) {
       const selected = elements.find((el) => el.id === selectedId);
 
@@ -191,7 +205,6 @@ function WhiteBoard() {
         return;
       }
 
-      // Check from top-most to bottom-most layer
       const hit = [...elements]
         .reverse()
         .find((el) => isPointInsideElement(coords, el));
@@ -206,7 +219,7 @@ function WhiteBoard() {
       return;
     }
 
-    // 2. LAYER-SAFE ERASER: Only delete the topmost element at that point
+    // 2. ERASER
     if (activeTool === TOOLS.ERASER) {
       const hit = [...elements]
         .reverse()
@@ -218,26 +231,77 @@ function WhiteBoard() {
       return;
     }
 
-    // 3. TEXT OR STICKY NOTE: Open inline text editor
-    if (activeTool === TOOLS.TEXT || activeTool === TOOLS.STICKY) {
-      const isSticky = activeTool === TOOLS.STICKY;
-      const width = isSticky ? 160 : 180;
-      const height = isSticky ? 140 : 40;
-
-      setTextInput({
+    // 3. STICKY NOTE (Instantly creates note & opens editor)
+    if (activeTool === TOOLS.STICKY) {
+      const noteWidth = 180;
+      const noteHeight = 160;
+      const newNote = {
         id: Date.now(),
-        type: activeTool,
+        type: TOOLS.STICKY,
+        x1: coords.x,
+        y1: coords.y,
+        x2: coords.x + noteWidth,
+        y2: coords.y + noteHeight,
+        text: "",
+        bgColor: "#fef08a",
+        strokeColor: "#facc15",
+        strokeWidth: 1,
+        angle: 0,
+      };
+
+      // Add to elements and immediately start editing
+      const updated = [...elements, newNote];
+      commitToHistory(updated);
+      setSelectedId(newNote.id);
+
+      setEditingText({
+        id: newNote.id,
         x: coords.x,
         y: coords.y,
-        width,
-        height,
-        value: "",
-        bgColor: isSticky ? "#fef08a" : "transparent",
+        width: noteWidth,
+        height: noteHeight,
+        text: "",
+        type: TOOLS.STICKY,
       });
+
+      // Switch back to select tool so dragging works right after
+      setActiveTool(TOOLS.SELECT);
       return;
     }
 
-    // 4. SHAPES & PENCIL
+    // 4. PLAIN TEXT
+    if (activeTool === TOOLS.TEXT) {
+      const textWidth = 200;
+      const textHeight = 40;
+      const newText = {
+        id: Date.now(),
+        type: TOOLS.TEXT,
+        x1: coords.x,
+        y1: coords.y,
+        x2: coords.x + textWidth,
+        y2: coords.y + textHeight,
+        text: "",
+        strokeColor,
+        strokeWidth,
+        angle: 0,
+      };
+
+      setEditingText({
+        id: newText.id,
+        x: coords.x,
+        y: coords.y,
+        width: textWidth,
+        height: textHeight,
+        text: "",
+        type: TOOLS.TEXT,
+        isNew: true,
+      });
+
+      setActiveTool(TOOLS.SELECT);
+      return;
+    }
+
+    // 5. SHAPES & FREEHAND
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
@@ -284,7 +348,6 @@ function WhiteBoard() {
       if (!selected) return;
 
       const bounds = getElementBounds(selected);
-      // Calculate angle from center to mouse position
       const rad =
         Math.atan2(coords.y - bounds.cy, coords.x - bounds.cx) + Math.PI / 2;
 
@@ -321,7 +384,7 @@ function WhiteBoard() {
       return;
     }
 
-    // DRAWING
+    // IN-PROGRESS DRAWING
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
         setCurrentElement((prev) => ({
@@ -349,29 +412,60 @@ function WhiteBoard() {
     setActionState("none");
   };
 
-  // Finalize Text or Sticky Note input
-  const handleTextCommit = () => {
-    if (!textInput || !textInput.value.trim()) {
-      setTextInput(null);
-      return;
+  // Double click to edit sticky note or text
+  const handleDoubleClick = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
+    const hit = [...elements]
+      .reverse()
+      .find((el) => isPointInsideElement(coords, el));
+
+    if (hit && (hit.type === TOOLS.STICKY || hit.type === TOOLS.TEXT)) {
+      const bounds = getElementBounds(hit);
+      setEditingText({
+        id: hit.id,
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        text: hit.text || "",
+        type: hit.type,
+      });
+    }
+  };
+
+  // Save Text / Sticky Note changes
+  const finishTextEditing = () => {
+    if (!editingText) return;
+
+    if (editingText.isNew) {
+      if (editingText.text.trim()) {
+        const newEl = {
+          id: editingText.id,
+          type: editingText.type,
+          x1: editingText.x,
+          y1: editingText.y,
+          x2: editingText.x + editingText.width,
+          y2: editingText.y + editingText.height,
+          text: editingText.text,
+          strokeColor,
+          strokeWidth,
+          angle: 0,
+        };
+        commitToHistory([...elements, newEl]);
+      }
+    } else {
+      const updated = elements
+        .map((el) =>
+          el.id === editingText.id ? { ...el, text: editingText.text } : el,
+        )
+        .filter((el) => el.type !== TOOLS.TEXT || el.text.trim() !== ""); // Delete blank text
+      commitToHistory(updated);
     }
 
-    const newElement = {
-      id: textInput.id,
-      type: textInput.type,
-      x1: textInput.x,
-      y1: textInput.y,
-      x2: textInput.x + textInput.width,
-      y2: textInput.y + textInput.height,
-      text: textInput.value,
-      strokeColor,
-      strokeWidth,
-      bgColor: textInput.bgColor,
-      angle: 0,
-    };
-
-    commitToHistory([...elements, newElement]);
-    setTextInput(null);
+    setEditingText(null);
   };
 
   return (
@@ -386,51 +480,56 @@ function WhiteBoard() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
         className="block h-full w-full touch-none"
       />
 
-      {/* Inline Text / Sticky Note Input Overlay */}
-      {textInput && (
+      {/* Floating Active Note Editor */}
+      {editingText && (
         <div
-          className="absolute z-20 pointer-events-auto"
+          className="pointer-events-auto absolute z-30"
           style={{
-            left: `${textInput.x * zoom + panOffset.x}px`,
-            top: `${textInput.y * zoom + panOffset.y}px`,
+            left: `${editingText.x * zoom + panOffset.x}px`,
+            top: `${editingText.y * zoom + panOffset.y}px`,
+            width: `${editingText.width * zoom}px`,
+            height: `${editingText.height * zoom}px`,
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <textarea
             autoFocus
-            rows={textInput.type === TOOLS.STICKY ? 4 : 1}
+            value={editingText.text}
             placeholder={
-              textInput.type === TOOLS.STICKY
-                ? "Take a note..."
-                : "Type text..."
+              editingText.type === TOOLS.STICKY
+                ? "Write a note..."
+                : "Type here..."
             }
-            value={textInput.value}
             onChange={(e) =>
-              setTextInput((prev) => ({ ...prev, value: e.target.value }))
+              setEditingText((prev) => ({ ...prev, text: e.target.value }))
             }
-            onBlur={handleTextCommit}
+            onBlur={finishTextEditing}
             onKeyDown={(e) => {
               if (
                 e.key === "Enter" &&
                 !e.shiftKey &&
-                textInput.type === TOOLS.TEXT
+                editingText.type === TOOLS.TEXT
               ) {
                 e.preventDefault();
-                handleTextCommit();
+                finishTextEditing();
+              }
+              if (e.key === "Escape") {
+                finishTextEditing();
               }
             }}
-            className={`resize-none border outline-none p-2 font-sans shadow-md rounded-md ${
-              textInput.type === TOOLS.STICKY
-                ? "bg-yellow-200 text-slate-800 border-yellow-400 placeholder-yellow-700/60"
-                : "bg-transparent text-slate-900 dark:text-slate-100 border-indigo-400"
-            }`}
             style={{
-              width: `${textInput.width}px`,
-              minHeight: `${textInput.height}px`,
-              fontSize: textInput.type === TOOLS.STICKY ? "14px" : "18px",
+              fontSize: `${(editingText.type === TOOLS.STICKY ? 14 : 16) * zoom}px`,
+              lineHeight: 1.3,
             }}
+            className={`h-full w-full resize-none rounded-lg p-2.5 outline-none transition-shadow ${
+              editingText.type === TOOLS.STICKY
+                ? "border border-amber-300 bg-[#fef08a] font-sans text-slate-900 shadow-xl placeholder-amber-700/50 focus:ring-2 focus:ring-amber-400"
+                : "border border-indigo-400 bg-transparent font-sans text-slate-900 shadow-sm dark:text-slate-100"
+            }`}
           />
         </div>
       )}
