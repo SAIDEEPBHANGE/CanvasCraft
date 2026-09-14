@@ -1,6 +1,6 @@
 # CanvasCraft — Collaborative & Interactive Whiteboard
 
-![CanvasCraft](/CanvasCraft.png)
+![CanvasCraft](/Versions/V02CanvasCraft.png)
 
 ## Overview
 
