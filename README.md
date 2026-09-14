@@ -1,6 +1,7 @@
 # CanvasCraft — Collaborative & Interactive Whiteboard
 
-![CanvasCraft](/Versions/V02CanvasCraft.png)
+![CanvasCraft Light Desktop](/Versions/V02/V02-CanvasCraft-Light-lg.png)
+![CanvasCraft Dark Desktop](/Versions/V02/V02-CanvasCraft-dark-lg.png)
 
 ## Overview
 
