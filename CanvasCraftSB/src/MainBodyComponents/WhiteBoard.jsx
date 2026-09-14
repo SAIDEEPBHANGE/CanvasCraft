@@ -6,6 +6,7 @@ import {
   renderElement,
   renderSelectionBox,
   getElementBounds,
+  getResizeHandles,
 } from "../utils/drawing";
 import { Check, X } from "lucide-react";
 
@@ -27,11 +28,14 @@ function WhiteBoard() {
     canvasRef,
   } = useCanvas();
 
-  const [actionState, setActionState] = useState("none");
+  const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "resizing" | "panning"
+  const [resizeHandle, setResizeHandle] = useState(null);
   const [currentElement, setCurrentElement] = useState(null);
   const [editingElement, setEditingElement] = useState(null);
+  const [canvasCursor, setCanvasCursor] = useState("default");
 
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const initialElementRef = useRef(null);
   const panStartRef = useRef({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
@@ -48,14 +52,11 @@ function WhiteBoard() {
     [setElements, setHistory, setHistoryStep],
   );
 
-  // Focus textarea safely
   useEffect(() => {
     if (editingElement && textareaRef.current) {
       openTimeRef.current = Date.now();
       const timer = setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-        }
+        if (textareaRef.current) textareaRef.current.focus();
       }, 50);
       return () => clearTimeout(timer);
     }
@@ -94,12 +95,12 @@ function WhiteBoard() {
       renderElement(ctx, element);
     });
 
-    // 2. Draw active shape preview
+    // 2. Draw active in-progress shape
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
 
-    // 3. Draw selection handles
+    // 3. Draw selection box & resize/rotation handles
     if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected) {
@@ -143,6 +144,7 @@ function WhiteBoard() {
     redrawCanvas();
   }, [redrawCanvas]);
 
+  // Rotate point into local element coordinate space
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
@@ -185,12 +187,24 @@ function WhiteBoard() {
     return Math.hypot(handleX - local.x, handleY - local.y) < 12 / zoom;
   };
 
-  // Safe commit function
+  const getClickedResizeHandle = (point, element) => {
+    const local = toLocalCoords(point, element);
+    const handles = getResizeHandles(element, 6);
+    const radius = 9 / zoom;
+
+    for (const [handleKey, hPos] of Object.entries(handles)) {
+      if (Math.hypot(hPos.x - local.x, hPos.y - local.y) <= radius) {
+        return handleKey;
+      }
+    }
+    return null;
+  };
+
+  // Text & Sticky Saving
   const saveTextAndClose = () => {
     if (!editingElement) return;
 
     const textToSave = editingElement.text.trim();
-
     if (textToSave) {
       if (editingElement.isNew) {
         const newEl = {
@@ -218,7 +232,6 @@ function WhiteBoard() {
         commitToHistory(updated);
       }
     } else if (!editingElement.isNew) {
-      // If an existing note was completely cleared, remove it
       const remaining = elements.filter((el) => el.id !== editingElement.id);
       commitToHistory(remaining);
       setSelectedId(null);
@@ -236,7 +249,6 @@ function WhiteBoard() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // If an editor is active and you tap canvas, save it
     if (editingElement) {
       saveTextAndClose();
       return;
@@ -259,11 +271,25 @@ function WhiteBoard() {
     if (activeTool === TOOLS.SELECT) {
       const selected = elements.find((el) => el.id === selectedId);
 
+      // Check Resize Handles
+      if (selected && selected.type !== TOOLS.PENCIL) {
+        const handle = getClickedResizeHandle(coords, selected);
+        if (handle) {
+          setActionState("resizing");
+          setResizeHandle(handle);
+          dragStartRef.current = coords;
+          initialElementRef.current = { ...selected };
+          return;
+        }
+      }
+
+      // Check Rotation Handle
       if (selected && isOverRotationHandle(coords, selected)) {
         setActionState("rotating");
         return;
       }
 
+      // Element Selection & Moving
       const hit = [...elements]
         .reverse()
         .find((el) => isPointInsideElement(coords, el));
@@ -290,7 +316,7 @@ function WhiteBoard() {
       return;
     }
 
-    // 3. STICKY NOTE CREATION
+    // 3. STICKY NOTE
     if (activeTool === TOOLS.STICKY) {
       setEditingElement({
         id: Date.now(),
@@ -306,7 +332,7 @@ function WhiteBoard() {
       return;
     }
 
-    // 4. TEXT CREATION
+    // 4. TEXT
     if (activeTool === TOOLS.TEXT) {
       setEditingElement({
         id: Date.now(),
@@ -353,6 +379,27 @@ function WhiteBoard() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
+
+    // Update dynamic cursor hovering over handles when in SELECT mode
+    if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
+      const selected = elements.find((el) => el.id === selectedId);
+      if (selected && selected.type !== TOOLS.PENCIL) {
+        const handle = getClickedResizeHandle(coords, selected);
+        if (handle) {
+          const handles = getResizeHandles(selected);
+          setCanvasCursor(handles[handle]?.cursor || "default");
+          return;
+        }
+      }
+      if (selected && isOverRotationHandle(coords, selected)) {
+        setCanvasCursor("grab");
+        return;
+      }
+      setCanvasCursor("default");
+    }
+
+    // PANNING
     if (actionState === "panning") {
       setPanOffset({
         x: e.clientX - panStartRef.current.x,
@@ -361,8 +408,48 @@ function WhiteBoard() {
       return;
     }
 
-    const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
+    // RESIZING
+    if (actionState === "resizing" && selectedId && initialElementRef.current) {
+      const orig = initialElementRef.current;
+      const angle = orig.angle || 0;
 
+      // Project delta in unrotated space
+      const rad = -angle;
+      const rawDx = coords.x - dragStartRef.current.x;
+      const rawDy = coords.y - dragStartRef.current.y;
+      const dx = rawDx * Math.cos(rad) - rawDy * Math.sin(rad);
+      const dy = rawDx * Math.sin(rad) + rawDy * Math.cos(rad);
+
+      let minX = Math.min(orig.x1, orig.x2);
+      let maxX = Math.max(orig.x1, orig.x2);
+      let minY = Math.min(orig.y1, orig.y2);
+      let maxY = Math.max(orig.y1, orig.y2);
+
+      if (resizeHandle.includes("e")) maxX += dx;
+      if (resizeHandle.includes("s")) maxY += dy;
+      if (resizeHandle.includes("w")) minX += dx;
+      if (resizeHandle.includes("n")) minY += dy;
+
+      // Minimum size guard (20px)
+      if (maxX - minX >= 20 && maxY - minY >= 20) {
+        setElements((prev) =>
+          prev.map((el) =>
+            el.id === selectedId
+              ? {
+                  ...el,
+                  x1: minX,
+                  y1: minY,
+                  x2: maxX,
+                  y2: maxY,
+                }
+              : el,
+          ),
+        );
+      }
+      return;
+    }
+
+    // ROTATING
     if (actionState === "rotating" && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (!selected) return;
@@ -377,6 +464,7 @@ function WhiteBoard() {
       return;
     }
 
+    // MOVING
     if (actionState === "moving" && selectedId) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
@@ -403,6 +491,7 @@ function WhiteBoard() {
       return;
     }
 
+    // DRAWING
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
         setCurrentElement((prev) => ({
@@ -424,13 +513,20 @@ function WhiteBoard() {
     if (actionState === "drawing" && currentElement) {
       commitToHistory([...elements, currentElement]);
       setCurrentElement(null);
-    } else if (actionState === "moving" || actionState === "rotating") {
+    } else if (
+      actionState === "moving" ||
+      actionState === "rotating" ||
+      actionState === "resizing"
+    ) {
       commitToHistory(elements);
     }
+
     setActionState("none");
+    setResizeHandle(null);
+    initialElementRef.current = null;
   };
 
-  // Double click to edit text or sticky
+  // Double click to re-open text or sticky note
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -459,6 +555,7 @@ function WhiteBoard() {
   return (
     <div
       aria-label="Canvas Workspace"
+      style={{ cursor: canvasCursor }}
       className="absolute inset-0 h-full w-full touch-none overflow-hidden bg-[#fdfdfd] bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] bg-size-[24px_24px] dark:bg-[#121212] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)]"
     >
       <canvas
@@ -498,7 +595,6 @@ function WhiteBoard() {
               setEditingElement((prev) => ({ ...prev, text: val }));
             }}
             onBlur={() => {
-              // Ignore blur that happens within the first 400ms of opening
               if (Date.now() - openTimeRef.current < 400) return;
               saveTextAndClose();
             }}
@@ -521,12 +617,11 @@ function WhiteBoard() {
             }}
             className={`w-full resize-none p-2.5 outline-none shadow-lg ${
               editingElement.type === TOOLS.STICKY
-                ? "rounded-t-lg border-t border-x border-amber-300 bg-[#fef08a] font-sans text-slate-900 placeholder-amber-700/50 focus:ring-1 focus:ring-amber-400"
+                ? "rounded-t-lg border-t border-x border-amber-300 bg-[#fef08a] font-sans text-slate-900 placeholder-amber-700/50 focus:ring-2 focus:ring-amber-400"
                 : "rounded-t-md border-2 border-b-0 border-dashed border-indigo-500 bg-white/95 font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
             }`}
           />
 
-          {/* Explicit Save / Done Toolbar Bar */}
           <div
             className={`flex items-center justify-end gap-1.5 px-2 py-1 shadow-md ${
               editingElement.type === TOOLS.STICKY

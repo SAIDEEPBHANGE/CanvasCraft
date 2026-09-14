@@ -54,8 +54,27 @@ export function getElementBounds(element) {
 }
 
 /**
- * Safe rectangle drawer (supports round corners when available)
+ * Returns positions of all 8 resize handles in unrotated local bounding space
  */
+export function getResizeHandles(element, padding = 6) {
+  const bounds = getElementBounds(element);
+  const x = bounds.x - padding;
+  const y = bounds.y - padding;
+  const w = bounds.width + padding * 2;
+  const h = bounds.height + padding * 2;
+
+  return {
+    nw: { x, y, cursor: "nwse-resize" },
+    n: { x: x + w / 2, y, cursor: "ns-resize" },
+    ne: { x: x + w, y, cursor: "nesw-resize" },
+    e: { x: x + w, y: y + h / 2, cursor: "ew-resize" },
+    se: { x: x + w, y: y + h, cursor: "nwse-resize" },
+    s: { x: x + w / 2, y: y + h, cursor: "ns-resize" },
+    sw: { x, y: y + h, cursor: "nesw-resize" },
+    w: { x, y: y + h / 2, cursor: "ew-resize" },
+  };
+}
+
 function drawCardRect(ctx, x, y, width, height, radius = 6) {
   ctx.beginPath();
   if (typeof ctx.roundRect === "function") {
@@ -66,7 +85,7 @@ function drawCardRect(ctx, x, y, width, height, radius = 6) {
 }
 
 /**
- * Draws the bounding box and rotation handle for the selected item
+ * Draws the bounding box, 8 resize handles, and rotation stem
  */
 export function renderSelectionBox(ctx, element) {
   const bounds = getElementBounds(element);
@@ -85,14 +104,14 @@ export function renderSelectionBox(ctx, element) {
   const w = bounds.width + padding * 2;
   const h = bounds.height + padding * 2;
 
-  // Dashed outline
+  // Bounding dashed box
   ctx.strokeStyle = "#6366f1";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 4]);
   ctx.strokeRect(x, y, w, h);
   ctx.setLineDash([]);
 
-  // Rotation handle stem & anchor
+  // Rotation Handle
   const handleDistance = 22;
   const handleX = x + w / 2;
   const handleY = y - handleDistance;
@@ -100,15 +119,37 @@ export function renderSelectionBox(ctx, element) {
   ctx.beginPath();
   ctx.moveTo(x + w / 2, y);
   ctx.lineTo(handleX, handleY);
+  ctx.strokeStyle = "#6366f1";
   ctx.stroke();
 
   ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#6366f1";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(handleX, handleY, 4.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
+  // 8 Resize Handles
+  const handles = getResizeHandles(element, padding);
+  const handleSize = 7;
+
+  Object.values(handles).forEach((hPos) => {
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#6366f1";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(
+      hPos.x - handleSize / 2,
+      hPos.y - handleSize / 2,
+      handleSize,
+      handleSize,
+    );
+    ctx.strokeRect(
+      hPos.x - handleSize / 2,
+      hPos.y - handleSize / 2,
+      handleSize,
+      handleSize,
+    );
+  });
 
   ctx.restore();
 }
@@ -186,27 +227,23 @@ export function renderElement(ctx, element) {
     }
 
     case "sticky": {
-      // 1. Shadow
       ctx.save();
       ctx.shadowColor = "rgba(0, 0, 0, 0.18)";
       ctx.shadowBlur = 12;
       ctx.shadowOffsetY = 4;
 
-      // 2. Note fill
       ctx.fillStyle = element.bgColor || "#fef08a";
       drawCardRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
       ctx.fill();
       ctx.restore();
 
-      // 3. Border
       ctx.strokeStyle = element.strokeColor || "#eab308";
       ctx.lineWidth = 1.5;
       drawCardRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
       ctx.stroke();
 
-      // 4. Content
       if (element.text) {
-        ctx.fillStyle = "#1e293b"; // Dark text for yellow sticky
+        ctx.fillStyle = "#1e293b";
         ctx.font = "14px 'Inter', sans-serif";
         ctx.textBaseline = "top";
 
@@ -242,7 +279,6 @@ export function renderElement(ctx, element) {
       if (element.text) {
         const isDark = document.documentElement.classList.contains("dark");
         let textColor = strokeColor || "#000000";
-        // Ensure contrast if default black is drawn in dark mode
         if (isDark && (textColor === "#000000" || textColor === "#000")) {
           textColor = "#f8fafc";
         }
