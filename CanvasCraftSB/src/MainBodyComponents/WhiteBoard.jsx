@@ -205,8 +205,9 @@ function WhiteBoard() {
     if (!editingElement) return;
 
     const textToSave = editingElement.text.trim();
-    if (textToSave) {
-      if (editingElement.isNew) {
+
+    if (editingElement.isNew) {
+      if (textToSave) {
         const newEl = {
           id: editingElement.id,
           type: editingElement.type,
@@ -223,18 +224,38 @@ function WhiteBoard() {
         };
         commitToHistory([...elements, newEl]);
         setSelectedId(newEl.id);
-      } else {
+      }
+    } else {
+      // If editing an existing element (shape, sticky, or text)
+      const isShape =
+        editingElement.type === TOOLS.RECTANGLE ||
+        editingElement.type === TOOLS.CIRCLE;
+
+      if (isShape) {
+        // Shapes keep existing geometry, just update or clear the inner text
         const updated = elements.map((el) =>
           el.id === editingElement.id
             ? { ...el, text: editingElement.text }
             : el,
         );
         commitToHistory(updated);
+      } else {
+        // Pure text elements are removed if emptied
+        if (textToSave) {
+          const updated = elements.map((el) =>
+            el.id === editingElement.id
+              ? { ...el, text: editingElement.text }
+              : el,
+          );
+          commitToHistory(updated);
+        } else {
+          const remaining = elements.filter(
+            (el) => el.id !== editingElement.id,
+          );
+          commitToHistory(remaining);
+          setSelectedId(null);
+        }
       }
-    } else if (!editingElement.isNew) {
-      const remaining = elements.filter((el) => el.id !== editingElement.id);
-      commitToHistory(remaining);
-      setSelectedId(null);
     }
 
     setEditingElement(null);
@@ -348,7 +369,21 @@ function WhiteBoard() {
       return;
     }
 
-    // 5. SHAPES & DRAWING
+    // 5. EXISTING ELEMENT INTERCEPTOR
+    // If user clicks on an existing shape (even while a shape tool is active),
+    // select it instead of drawing an accidental micro-shape over it!
+    const hitExisting = [...elements]
+      .reverse()
+      .find((el) => isPointInsideElement(coords, el));
+    if (hitExisting) {
+      setSelectedId(hitExisting.id);
+      setActiveTool(TOOLS.SELECT);
+      setActionState("moving");
+      dragStartRef.current = coords;
+      return;
+    }
+
+    // 6. SHAPES & DRAWING (Only runs on empty canvas space)
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
@@ -511,8 +546,30 @@ function WhiteBoard() {
   // Pointer Up
   const handlePointerUp = () => {
     if (actionState === "drawing" && currentElement) {
-      commitToHistory([...elements, currentElement]);
+      let isValidShape = true;
+      if (currentElement.type === TOOLS.PENCIL) {
+        isValidShape =
+          currentElement.points && currentElement.points.length > 1;
+      } else if (
+        [TOOLS.RECTANGLE, TOOLS.CIRCLE, TOOLS.LINE, TOOLS.ARROW].includes(
+          currentElement.type,
+        )
+      ) {
+        const dist = Math.hypot(
+          currentElement.x2 - currentElement.x1,
+          currentElement.y2 - currentElement.y1,
+        );
+        if (dist < 6) isValidShape = false;
+      }
+
+      if (isValidShape) {
+        commitToHistory([...elements, currentElement]);
+        setSelectedId(currentElement.id);
+      }
+
       setCurrentElement(null);
+      // Auto-revert to select tool after drawing
+      setActiveTool(TOOLS.SELECT);
     } else if (
       actionState === "moving" ||
       actionState === "rotating" ||
@@ -526,27 +583,43 @@ function WhiteBoard() {
     initialElementRef.current = null;
   };
 
-  // Double click to re-open text or sticky note
+  // Double click to add or edit text inside ANY shape or note
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
+    // Find the topmost hit element
     const hit = [...elements]
       .reverse()
       .find((el) => isPointInsideElement(coords, el));
 
-    if (hit && (hit.type === TOOLS.STICKY || hit.type === TOOLS.TEXT)) {
+    if (hit && hit.type !== TOOLS.PENCIL) {
       const bounds = getElementBounds(hit);
+
+      // Determine size of the editor box
+      const isShape = hit.type === TOOLS.RECTANGLE || hit.type === TOOLS.CIRCLE;
+      const editorWidth = isShape
+        ? Math.max(bounds.width * 0.85, 120)
+        : bounds.width;
+      const editorHeight = isShape
+        ? Math.max(bounds.height * 0.6, 50)
+        : bounds.height;
+
+      // Position the editor directly in the center of the shape
+      const editorX = isShape ? bounds.cx - editorWidth / 2 : bounds.x;
+      const editorY = isShape ? bounds.cy - editorHeight / 2 : bounds.y;
+
       setEditingElement({
         id: hit.id,
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height,
+        x: editorX,
+        y: editorY,
+        width: editorWidth,
+        height: editorHeight,
         text: hit.text || "",
         type: hit.type,
         isNew: false,
+        isEmbedded: isShape, // Flag indicating text is embedded inside a shape
       });
       setSelectedId(hit.id);
     }

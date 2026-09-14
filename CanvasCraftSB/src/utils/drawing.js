@@ -191,6 +191,7 @@ export function renderElement(ctx, element) {
       ctx.beginPath();
       ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
       ctx.stroke();
+      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -206,6 +207,7 @@ export function renderElement(ctx, element) {
         2 * Math.PI,
       );
       ctx.stroke();
+      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -214,6 +216,7 @@ export function renderElement(ctx, element) {
       ctx.moveTo(element.x1, element.y1);
       ctx.lineTo(element.x2, element.y2);
       ctx.stroke();
+      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -223,6 +226,7 @@ export function renderElement(ctx, element) {
       ctx.lineTo(element.x2, element.y2);
       ctx.stroke();
       drawArrowhead(ctx, element.x1, element.y1, element.x2, element.y2);
+      renderCenteredShapeText(ctx, element, bounds);
       break;
     }
 
@@ -300,4 +304,52 @@ export function renderElement(ctx, element) {
   }
 
   ctx.restore();
+}
+/**
+ * Helper to render auto-wrapped text centered inside a shape's bounding box
+ */
+function renderCenteredShapeText(ctx, element, bounds) {
+  if (!element.text) return;
+
+  const isDark = document.documentElement.classList.contains("dark");
+  let textColor = element.strokeColor || "#000000";
+  if (isDark && (textColor === "#000000" || textColor === "#000")) {
+    textColor = "#f8fafc";
+  }
+
+  ctx.fillStyle = textColor;
+  ctx.font = "15px 'Inter', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const padding = 12;
+  const maxWidth = Math.max(bounds.width - padding * 2, 20);
+  const lineHeight = 20;
+
+  const paragraphs = element.text.split("\n");
+  const lines = [];
+
+  for (const para of paragraphs) {
+    const words = para.split(" ");
+    let currentLine = "";
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = currentLine ? `${currentLine} ${words[n]}` : words[n];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        lines.push(currentLine);
+        currentLine = words[n];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine);
+  }
+
+  const totalHeight = lines.length * lineHeight;
+  const startY = bounds.cy - totalHeight / 2 + lineHeight / 2;
+
+  lines.forEach((line, index) => {
+    ctx.fillText(line, bounds.cx, startY + index * lineHeight);
+  });
 }
