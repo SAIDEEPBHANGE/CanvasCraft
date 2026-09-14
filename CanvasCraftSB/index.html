@@ -9,21 +9,14 @@
     />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>CanvasCraft — Collaborative Whiteboard</title>
-    <!-- Inter Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
   </head>
   <body
-    class="m-0 h-screen w-screen overflow-hidden p-0 touch-none select-none"
+    class="m-0 h-full w-full overflow-hidden p-0 font-sans text-slate-800 touch-none select-none dark:bg-[#121212] dark:text-slate-100"
   >
-    <div id="root" class="h-full w-full"></div>
+    <div id="root" class="h-dvh w-screen overflow-hidden"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -7,11 +7,12 @@ function PropertiesBar() {
     <aside
       id="propertiesBar"
       aria-label="Properties"
-      className="fixed bottom-20 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-3.5 py-2 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 md:absolute md:top-20 md:bottom-auto md:left-4 md:translate-x-0 md:flex-col md:items-start md:p-3.5"
+      /* Elevated above the bottom dock on fold/mobile screens with plenty of clearance */
+      className="fixed bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-1.5 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 lg:absolute lg:top-16 lg:bottom-auto lg:left-3 lg:translate-x-0 lg:flex-col lg:items-start lg:p-3"
     >
-      {/* Stroke Color */}
-      <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1.5">
-        <span className="hidden text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400 md:inline">
+      {/* Colors */}
+      <div className="flex items-center gap-1.5 lg:flex-col lg:items-start lg:gap-1.5">
+        <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 lg:inline">
           Stroke
         </span>
         <div className="flex items-center gap-1.5">
@@ -39,12 +40,11 @@ function PropertiesBar() {
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 md:my-1 md:h-px md:w-full" />
+      <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 lg:my-1 lg:h-[1px] lg:w-full" />
 
-      {/* Stroke Width Slider */}
-      <div className="flex items-center gap-2 md:w-full md:flex-col md:items-start md:gap-1.5">
-        <div className="flex items-center justify-between text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400 md:w-full">
+      {/* Slider */}
+      <div className="flex items-center gap-1.5 lg:w-full lg:flex-col lg:items-start lg:gap-1.5">
+        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 lg:w-full">
           <label htmlFor="strokeWidth" className="cursor-pointer select-none">
             Stroke
           </label>
@@ -58,7 +58,7 @@ function PropertiesBar() {
           min="1"
           max="20"
           defaultValue="3"
-          className="h-1.5 w-20 cursor-pointer accent-indigo-600 dark:accent-indigo-400 md:w-36"
+          className="h-1.5 w-16 cursor-pointer accent-indigo-600 dark:accent-indigo-400 lg:w-32"
         />
       </div>
     </aside>

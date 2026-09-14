@@ -1,56 +1,67 @@
-import { Undo2, Redo2, Sun } from "lucide-react";
+import { Undo2, Redo2, Sun, Trash2, Download } from "lucide-react";
 
 function RightHeader() {
+  const iconBtnClass =
+    "flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800";
+
   return (
-    <div className="flex items-center gap-2">
-      {/* History Controls */}
-      <div className="flex items-center gap-1">
-        <button
-          id="undoBtn"
-          title="Undo (Ctrl+Z)"
-          aria-label="Undo"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-slate-200 bg-transparent text-slate-500 transition-all duration-150 hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-indigo-400 dark:hover:bg-indigo-500/15 dark:hover:text-indigo-400"
-        >
-          <Undo2 className="h-5.5 w-5.5 stroke-2" />
-        </button>
+    <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-white/95 p-1 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:gap-1.5 sm:p-1.5">
+      {/* Undo */}
+      <button
+        id="undoBtn"
+        type="button"
+        title="Undo (Ctrl+Z)"
+        aria-label="Undo"
+        className={iconBtnClass}
+      >
+        <Undo2 className="h-4 w-4" />
+      </button>
 
-        <button
-          id="redoBtn"
-          title="Redo (Ctrl+Y)"
-          aria-label="Redo"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-slate-200 bg-transparent text-slate-500 transition-all duration-150 hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-indigo-400 dark:hover:bg-indigo-500/15 dark:hover:text-indigo-400"
-        >
-          <Redo2 className="h-5.5 w-5.5 stroke-2" />
-        </button>
-      </div>
+      {/* Redo */}
+      <button
+        id="redoBtn"
+        type="button"
+        title="Redo (Ctrl+Y)"
+        aria-label="Redo"
+        className={iconBtnClass}
+      >
+        <Redo2 className="h-4 w-4" />
+      </button>
 
-      {/* Theme Toggle Button */}
+      {/* Divider */}
+      <div className="mx-0.5 h-4 w-px bg-slate-200 dark:bg-slate-700 sm:mx-1" />
+
+      {/* Theme Toggle */}
       <button
         id="themeToggle"
+        type="button"
         title="Toggle Theme"
         aria-label="Toggle Theme"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-slate-200 bg-transparent text-slate-500 transition-all duration-150 hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-indigo-400 dark:hover:bg-indigo-500/15 dark:hover:text-indigo-400"
+        className={iconBtnClass}
       >
-        <Sun className="h-5.5 w-5.5 stroke-2" />
+        <Sun className="h-4 w-4" />
       </button>
 
-      {/* Vertical Divider */}
-      <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
-
-      {/* Clear Button (btn-secondary) */}
+      {/* Clear Button (Icon on mobile/fold, text label on sm+) */}
       <button
         id="clearCanvas"
-        className="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-200 bg-transparent px-[0.85rem] py-[0.45rem] text-[0.85rem] font-semibold text-slate-500 transition-all duration-200 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-50"
+        type="button"
+        title="Clear Canvas"
+        className="flex h-8 items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-slate-800 sm:px-2.5"
       >
-        Clear
+        <Trash2 className="h-4 w-4 sm:hidden" />
+        <span className="hidden sm:inline">Clear</span>
       </button>
 
-      {/* Export Button (btn-primary) */}
+      {/* Export Button (Icon on mobile/fold, text label on sm+) */}
       <button
         id="exportBtn"
-        className="inline-flex items-center gap-1.5 rounded-[10px] border border-transparent bg-indigo-600 px-[0.85rem] py-[0.45rem] text-[0.85rem] font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+        type="button"
+        title="Export"
+        className="flex h-8 items-center justify-center rounded-lg bg-indigo-600 px-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 sm:px-3"
       >
-        Export
+        <Download className="h-4 w-4 sm:hidden" />
+        <span className="hidden sm:inline">Export</span>
       </button>
     </div>
   );
