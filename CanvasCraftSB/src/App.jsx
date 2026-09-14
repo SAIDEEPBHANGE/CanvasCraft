@@ -10,20 +10,23 @@ function App() {
       {/* LAYER 1: Fullscreen Canvas */}
       <WhiteBoard />
 
-      {/* LAYER 2: Floating HUD (Clicks pass through to canvas by default) */}
+      {/* LAYER 2: Floating HUD Overlay */}
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2.5 sm:p-3 md:p-4">
-        {/* Top Section: Header & Action Buttons */}
+        {/* Top: Left Brand & Right Actions */}
         <Header />
 
-        {/* Middle Section: Left Sidebar Properties Drawer */}
-        <div className="flex flex-1 items-start py-2">
-          <PropertiesBar />
-        </div>
+        {/* Bottom Area */}
+        <div className="flex flex-col gap-2">
+          {/* Row Above Tools: Property Bar (Left) + Zoom Controls (Right) */}
+          <div className="flex items-center justify-between gap-2">
+            <PropertiesBar />
+            <ZoomFunctions />
+          </div>
 
-        {/* Bottom Section: Tool Dock & Zoom Controls */}
-        <div className="flex items-end justify-between gap-2">
-          <ZoomFunctions />
-          <DrawingTools />
+          {/* Very Bottom: Drawing Tool Dock */}
+          <div className="flex justify-center">
+            <DrawingTools />
+          </div>
         </div>
       </div>
     </div>

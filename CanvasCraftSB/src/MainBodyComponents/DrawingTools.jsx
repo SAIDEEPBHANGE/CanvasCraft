@@ -19,7 +19,7 @@ function DrawingTools() {
     <aside
       id="toolBar"
       aria-label="Drawing Tools"
-      className="pointer-events-auto flex max-w-[70vw] items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-md no-scrollbar dark:border-slate-800 dark:bg-slate-900/95 sm:max-w-fit lg:absolute lg:top-3 lg:left-1/2 lg:-translate-x-1/2"
+      className="pointer-events-auto flex max-w-[90vw] items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-md no-scrollbar dark:border-slate-800 dark:bg-slate-900/95 sm:max-w-fit lg:absolute lg:top-3 lg:left-1/2 lg:-translate-x-1/2"
     >
       {/* Select */}
       <button
