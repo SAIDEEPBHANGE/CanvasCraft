@@ -8,7 +8,7 @@ function RightHeader() {
   const { undo, redo, clearCanvas, canvasRef } = useCanvas();
 
   const handleExport = () => {
-    exportCanvasToPNG(canvasRef.current, "canvascraft.png", theme === "dark");
+    exportCanvasToPNG(canvasRef.current, "canvascraft", theme === "dark");
   };
 
   const iconBtnClass =

@@ -17,10 +17,13 @@ function WhiteBoard() {
     strokeColor,
     strokeWidth,
     zoom,
+    setZoom,
     panOffset,
     setPanOffset,
     elements,
     setElements,
+    history,
+    historyStep,
     setHistory,
     setHistoryStep,
     selectedId,
@@ -40,28 +43,34 @@ function WhiteBoard() {
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
 
+  // Commit state changes to Undo/Redo history
   const commitToHistory = useCallback(
     (newElements) => {
       setElements(newElements);
       setHistory((prev) => {
-        const updated = [...prev, newElements];
+        const upToCurrent = prev.slice(0, historyStep + 1);
+        const updated = [...upToCurrent, newElements];
         setHistoryStep(updated.length - 1);
         return updated;
       });
     },
-    [setElements, setHistory, setHistoryStep],
+    [setElements, setHistory, setHistoryStep, historyStep],
   );
 
+  // Focus textarea when editing starts
   useEffect(() => {
     if (editingElement && textareaRef.current) {
       openTimeRef.current = Date.now();
       const timer = setTimeout(() => {
-        if (textareaRef.current) textareaRef.current.focus();
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
       }, 50);
       return () => clearTimeout(timer);
     }
   }, [editingElement]);
 
+  // Main canvas redraw loop
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -83,7 +92,7 @@ function WhiteBoard() {
       panOffset.y * dpr,
     );
 
-    // 1. Draw elements
+    // 1. Draw committed elements
     elements.forEach((element) => {
       if (editingElement && editingElement.id === element.id) {
         if (element.type === TOOLS.STICKY) {
@@ -94,12 +103,12 @@ function WhiteBoard() {
       renderElement(ctx, element);
     });
 
-    // 2. Active element being drawn
+    // 2. Draw active shape preview
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
 
-    // 3. Selection box
+    // 3. Draw selection box & resize/rotation handles
     if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected) {
@@ -117,6 +126,7 @@ function WhiteBoard() {
     editingElement,
   ]);
 
+  // Canvas resize and retina DPI sync
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -143,6 +153,164 @@ function WhiteBoard() {
     redrawCanvas();
   }, [redrawCanvas]);
 
+  // Global Keyboard Shortcuts (Tool switching, undo/redo, delete)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === "input" || tag === "textarea" || editingElement) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      if (isCtrlOrCmd && key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          const next = historyStep + 1;
+          if (next < history.length) {
+            setHistoryStep(next);
+            setElements(history[next] || []);
+            setSelectedId(null);
+          }
+        } else {
+          const prev = historyStep - 1;
+          if (prev >= 0) {
+            setHistoryStep(prev);
+            setElements(history[prev] || []);
+            setSelectedId(null);
+          }
+        }
+        return;
+      }
+
+      if (isCtrlOrCmd && key === "y") {
+        e.preventDefault();
+        const next = historyStep + 1;
+        if (next < history.length) {
+          setHistoryStep(next);
+          setElements(history[next] || []);
+          setSelectedId(null);
+        }
+        return;
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        e.preventDefault();
+        const remaining = elements.filter((el) => el.id !== selectedId);
+        commitToHistory(remaining);
+        setSelectedId(null);
+        return;
+      }
+
+      switch (key) {
+        case "v":
+        case "1":
+          setActiveTool(TOOLS.SELECT);
+          break;
+        case "h":
+          setActiveTool(TOOLS.PAN);
+          break;
+        case "r":
+        case "2":
+          setActiveTool(TOOLS.RECTANGLE);
+          setSelectedId(null);
+          break;
+        case "c":
+        case "3":
+          setActiveTool(TOOLS.CIRCLE);
+          setSelectedId(null);
+          break;
+        case "a":
+        case "4":
+          setActiveTool(TOOLS.ARROW);
+          setSelectedId(null);
+          break;
+        case "l":
+        case "5":
+          setActiveTool(TOOLS.LINE);
+          setSelectedId(null);
+          break;
+        case "p":
+        case "6":
+          setActiveTool(TOOLS.PENCIL);
+          setSelectedId(null);
+          break;
+        case "t":
+        case "7":
+          setActiveTool(TOOLS.TEXT);
+          setSelectedId(null);
+          break;
+        case "s":
+        case "8":
+          setActiveTool(TOOLS.STICKY);
+          setSelectedId(null);
+          break;
+        case "e":
+        case "9":
+          setActiveTool(TOOLS.ERASER);
+          setSelectedId(null);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    editingElement,
+    selectedId,
+    elements,
+    history,
+    historyStep,
+    commitToHistory,
+    setActiveTool,
+    setElements,
+    setHistoryStep,
+    setSelectedId,
+  ]);
+
+  // Mouse Wheel and Pinch-to-Zoom towards cursor
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (!e.ctrlKey && (Math.abs(e.deltaX) > 0 || e.shiftKey)) {
+        setPanOffset((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }));
+        return;
+      }
+
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      const newZoom = Math.min(
+        Math.max(Number((zoom * zoomFactor).toFixed(3)), 0.1),
+        5.0,
+      );
+
+      if (newZoom === zoom) return;
+
+      const newPanX = mouseX - (mouseX - panOffset.x) * (newZoom / zoom);
+      const newPanY = mouseY - (mouseY - panOffset.y) * (newZoom / zoom);
+
+      setZoom(newZoom);
+      setPanOffset({ x: newPanX, y: newPanY });
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [canvasRef, zoom, panOffset, setZoom, setPanOffset]);
+
+  // Coordinate and hit testing helpers
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
@@ -198,6 +366,7 @@ function WhiteBoard() {
     return null;
   };
 
+  // Text & Sticky Saving
   const saveTextAndClose = () => {
     if (!editingElement) return;
 
@@ -259,6 +428,7 @@ function WhiteBoard() {
     setEditingElement(null);
   };
 
+  // Pointer Down
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -303,7 +473,7 @@ function WhiteBoard() {
         return;
       }
 
-      // Hit-test element selection
+      // Hit-test element
       const hit = [...elements]
         .reverse()
         .find((el) => isPointInsideElement(coords, el));
@@ -362,7 +532,7 @@ function WhiteBoard() {
       return;
     }
 
-    // 5. SHAPES & DRAWING (Can draw anywhere, including nested within other shapes)
+    // 5. DRAWING TOOLS (Can draw anywhere, including nested within other shapes)
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
@@ -388,13 +558,14 @@ function WhiteBoard() {
     }
   };
 
+  // Pointer Move
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
-    // Cursor update in SELECT mode
+    // Hover cursor feedback in SELECT mode
     if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (selected && selected.type !== TOOLS.PENCIL) {
@@ -519,6 +690,7 @@ function WhiteBoard() {
     }
   };
 
+  // Pointer Up
   const handlePointerUp = () => {
     if (actionState === "drawing" && currentElement) {
       let isValidShape = true;
@@ -560,6 +732,7 @@ function WhiteBoard() {
     initialElementRef.current = null;
   };
 
+  // Double click to edit text or shapes
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
