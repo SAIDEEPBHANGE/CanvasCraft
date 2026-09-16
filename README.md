@@ -1,13 +1,13 @@
 # CanvasCraft — Collaborative & Interactive Whiteboard
 
+[CanvasCraft Web Link](https://canvascraftsb.netlify.app/)
+
 ![CanvasCraft Light Desktop](/Versions/V02/V02-CanvasCraft-Light-lg.png)
 ![CanvasCraft Dark Desktop](/Versions/V02/V02-CanvasCraft-Dark-lg.png)
 
 ## Overview
 
 **CanvasCraft** is a high-performance, browser-based digital whiteboard designed for real-time creativity, note-taking, and visual brainstorming. Built entirely with Vanilla JavaScript and Vite without heavy external frameworks, CanvasCraft features custom HTML5 Canvas rendering, infinite pan and zoom capabilities, local state auto-persistence, customizable shape generation, dynamic text/sticky notes, and full dark/light theme adaptability.
-
----
 
 ## Key Features
 
