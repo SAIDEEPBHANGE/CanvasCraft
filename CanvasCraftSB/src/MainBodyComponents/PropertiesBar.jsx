@@ -1,7 +1,6 @@
 import { Plus, BringToFront, SendToBack } from "lucide-react";
 import { useCanvas } from "../context/CanvasContext";
 import { DEFAULT_COLORS, STROKE_CONFIG } from "../utils/constants";
-
 function PropertiesBar() {
   const {
     strokeColor,
@@ -12,7 +11,6 @@ function PropertiesBar() {
     bringForward,
     sendBackward,
   } = useCanvas();
-
   return (
     <aside
       id="propertiesBar"
@@ -37,7 +35,6 @@ function PropertiesBar() {
               }`}
             />
           ))}
-
           <label
             className={`relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed text-slate-500 transition-colors ${
               !DEFAULT_COLORS.includes(strokeColor)
@@ -64,9 +61,7 @@ function PropertiesBar() {
           </label>
         </div>
       </div>
-
       <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 lg:my-1 lg:h-px lg:w-full" />
-
       {/* Stroke Slider */}
       <div className="flex items-center gap-1.5 lg:w-full lg:flex-col lg:items-start lg:gap-1.5">
         <div className="hidden items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 lg:flex lg:w-full">
@@ -83,7 +78,6 @@ function PropertiesBar() {
           className="h-1.5 w-14 cursor-pointer accent-indigo-600 dark:accent-indigo-400 sm:w-20 lg:w-32"
         />
       </div>
-
       {/* Layering Controls (Appears when an element is selected) */}
       {selectedId && (
         <>
@@ -111,5 +105,4 @@ function PropertiesBar() {
     </aside>
   );
 }
-
 export default PropertiesBar;

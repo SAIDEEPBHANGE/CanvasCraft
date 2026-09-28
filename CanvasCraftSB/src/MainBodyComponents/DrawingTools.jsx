@@ -12,17 +12,14 @@ import {
 } from "lucide-react";
 import { useCanvas } from "../context/CanvasContext";
 import { TOOLS } from "../utils/constants";
-
 function DrawingTools() {
   const { activeTool, setActiveTool } = useCanvas();
-
   const getToolBtnClass = (toolName) =>
     `flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl border-none transition-all active:scale-95 ${
       activeTool === toolName
         ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400"
         : "bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
     }`;
-
   return (
     <aside
       id="toolBar"
@@ -37,7 +34,6 @@ function DrawingTools() {
       >
         <MousePointer className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.PAN)}
@@ -46,9 +42,7 @@ function DrawingTools() {
       >
         <Hand className="h-4 w-4 stroke-2" />
       </button>
-
       <div className="mx-0.5 h-4 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.RECTANGLE)}
@@ -57,7 +51,6 @@ function DrawingTools() {
       >
         <Square className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.CIRCLE)}
@@ -66,7 +59,6 @@ function DrawingTools() {
       >
         <Circle className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.ARROW)}
@@ -75,7 +67,6 @@ function DrawingTools() {
       >
         <ArrowRight className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.LINE)}
@@ -84,7 +75,6 @@ function DrawingTools() {
       >
         <Minus className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.PENCIL)}
@@ -93,7 +83,6 @@ function DrawingTools() {
       >
         <Pencil className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.TEXT)}
@@ -102,7 +91,6 @@ function DrawingTools() {
       >
         <Type className="h-4 w-4 stroke-2" />
       </button>
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.STICKY)}
@@ -111,9 +99,7 @@ function DrawingTools() {
       >
         <StickyNote className="h-4 w-4 stroke-2" />
       </button>
-
       <div className="mx-0.5 h-4 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
-
       <button
         type="button"
         onClick={() => setActiveTool(TOOLS.ERASER)}
@@ -125,5 +111,4 @@ function DrawingTools() {
     </aside>
   );
 }
-
 export default DrawingTools;

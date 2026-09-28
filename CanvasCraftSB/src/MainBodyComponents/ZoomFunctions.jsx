@@ -1,12 +1,9 @@
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { useCanvas } from "../context/CanvasContext";
-
 function ZoomFunctions() {
   const { zoom, zoomIn, zoomOut, resetZoom } = useCanvas();
-
   const btnClass =
     "flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800";
-
   return (
     <div
       id="zoomControls"
@@ -23,14 +20,12 @@ function ZoomFunctions() {
       >
         <ZoomOut className="h-3.5 w-3.5 stroke-2" />
       </button>
-
       <span
         id="zoomLevel"
         className="min-w-8.5 select-none text-center font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300"
       >
         {Math.round(zoom * 100)}%
       </span>
-
       <button
         id="zoomInBtn"
         type="button"
@@ -41,7 +36,6 @@ function ZoomFunctions() {
       >
         <ZoomIn className="h-3.5 w-3.5 stroke-2" />
       </button>
-
       <button
         id="zoomResetBtn"
         type="button"
@@ -54,5 +48,4 @@ function ZoomFunctions() {
     </div>
   );
 }
-
 export default ZoomFunctions;

@@ -9,7 +9,6 @@ import {
   getResizeHandles,
 } from "../utils/drawing";
 import { Check, X } from "lucide-react";
-
 function WhiteBoard() {
   const {
     activeTool,
@@ -30,19 +29,16 @@ function WhiteBoard() {
     setSelectedId,
     canvasRef,
   } = useCanvas();
-
   const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "resizing" | "panning"
   const [resizeHandle, setResizeHandle] = useState(null);
   const [currentElement, setCurrentElement] = useState(null);
   const [editingElement, setEditingElement] = useState(null);
   const [canvasCursor, setCanvasCursor] = useState("default");
-
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialElementRef = useRef(null);
   const panStartRef = useRef({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
-
   // Commit state changes to Undo/Redo history
   const commitToHistory = useCallback(
     (newElements) => {
@@ -56,7 +52,6 @@ function WhiteBoard() {
     },
     [setElements, setHistory, setHistoryStep, historyStep],
   );
-
   // Focus textarea when editing starts
   useEffect(() => {
     if (editingElement && textareaRef.current) {
@@ -69,20 +64,15 @@ function WhiteBoard() {
       return () => clearTimeout(timer);
     }
   }, [editingElement]);
-
   // Main canvas redraw loop
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     const dpr = window.devicePixelRatio || 1;
-
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     ctx.setTransform(
       dpr * zoom,
       0,
@@ -91,7 +81,6 @@ function WhiteBoard() {
       panOffset.x * dpr,
       panOffset.y * dpr,
     );
-
     // 1. Draw committed elements
     elements.forEach((element) => {
       if (editingElement && editingElement.id === element.id) {
@@ -102,12 +91,10 @@ function WhiteBoard() {
       }
       renderElement(ctx, element);
     });
-
     // 2. Draw active shape preview
     if (currentElement) {
       renderElement(ctx, currentElement);
     }
-
     // 3. Draw selection box & resize/rotation handles
     if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
       const selected = elements.find((el) => el.id === selectedId);
@@ -125,34 +112,27 @@ function WhiteBoard() {
     panOffset,
     editingElement,
   ]);
-
   // Canvas resize and retina DPI sync
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const handleResize = () => {
       const dpr = window.devicePixelRatio || 1;
       const width = window.innerWidth;
       const height = window.innerHeight;
-
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-
       redrawCanvas();
     };
-
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [canvasRef, redrawCanvas]);
-
   useEffect(() => {
     redrawCanvas();
   }, [redrawCanvas]);
-
   // Global Keyboard Shortcuts (Tool switching, undo/redo, delete)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -160,10 +140,8 @@ function WhiteBoard() {
       if (tag === "input" || tag === "textarea" || editingElement) {
         return;
       }
-
       const key = e.key.toLowerCase();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-
       if (isCtrlOrCmd && key === "z") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -183,7 +161,6 @@ function WhiteBoard() {
         }
         return;
       }
-
       if (isCtrlOrCmd && key === "y") {
         e.preventDefault();
         const next = historyStep + 1;
@@ -194,7 +171,6 @@ function WhiteBoard() {
         }
         return;
       }
-
       if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
         e.preventDefault();
         const remaining = elements.filter((el) => el.id !== selectedId);
@@ -202,7 +178,6 @@ function WhiteBoard() {
         setSelectedId(null);
         return;
       }
-
       switch (key) {
         case "v":
         case "1":
@@ -255,7 +230,6 @@ function WhiteBoard() {
           break;
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
@@ -270,19 +244,15 @@ function WhiteBoard() {
     setHistoryStep,
     setSelectedId,
   ]);
-
   // Mouse Wheel and Pinch-to-Zoom towards cursor
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const handleWheel = (e) => {
       e.preventDefault();
-
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-
       if (!e.ctrlKey && (Math.abs(e.deltaX) > 0 || e.shiftKey)) {
         setPanOffset((prev) => ({
           x: prev.x - e.deltaX,
@@ -290,53 +260,42 @@ function WhiteBoard() {
         }));
         return;
       }
-
       const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
       const newZoom = Math.min(
         Math.max(Number((zoom * zoomFactor).toFixed(3)), 0.1),
         5.0,
       );
-
       if (newZoom === zoom) return;
-
       const newPanX = mouseX - (mouseX - panOffset.x) * (newZoom / zoom);
       const newPanY = mouseY - (mouseY - panOffset.y) * (newZoom / zoom);
-
       setZoom(newZoom);
       setPanOffset({ x: newPanX, y: newPanY });
     };
-
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, [canvasRef, zoom, panOffset, setZoom, setPanOffset]);
-
   // Coordinate and hit testing helpers
   const toLocalCoords = (point, element) => {
     const bounds = getElementBounds(element);
     const angle = element.angle || 0;
     if (angle === 0) return point;
-
     const rad = -angle;
     const dx = point.x - bounds.cx;
     const dy = point.y - bounds.cy;
-
     return {
       x: bounds.cx + (dx * Math.cos(rad) - dy * Math.sin(rad)),
       y: bounds.cy + (dx * Math.sin(rad) + dy * Math.cos(rad)),
     };
   };
-
   const isPointInsideElement = (point, element) => {
     const local = toLocalCoords(point, element);
     const bounds = getElementBounds(element);
-
     if (element.type === TOOLS.PENCIL) {
       const tolerance = 8 / zoom;
       return element.points.some(
         (p) => Math.hypot(p.x - local.x, p.y - local.y) < tolerance,
       );
     }
-
     return (
       local.x >= bounds.x &&
       local.x <= bounds.x + bounds.width &&
@@ -344,7 +303,6 @@ function WhiteBoard() {
       local.y <= bounds.y + bounds.height
     );
   };
-
   const isOverRotationHandle = (point, element) => {
     const local = toLocalCoords(point, element);
     const bounds = getElementBounds(element);
@@ -352,12 +310,10 @@ function WhiteBoard() {
     const handleX = bounds.cx;
     return Math.hypot(handleX - local.x, handleY - local.y) < 12 / zoom;
   };
-
   const getClickedResizeHandle = (point, element) => {
     const local = toLocalCoords(point, element);
     const handles = getResizeHandles(element, 6);
     const radius = 9 / zoom;
-
     for (const [handleKey, hPos] of Object.entries(handles)) {
       if (Math.hypot(hPos.x - local.x, hPos.y - local.y) <= radius) {
         return handleKey;
@@ -365,13 +321,10 @@ function WhiteBoard() {
     }
     return null;
   };
-
   // Text & Sticky Saving
   const saveTextAndClose = () => {
     if (!editingElement) return;
-
     const textToSave = editingElement.text.trim();
-
     if (editingElement.isNew) {
       if (textToSave) {
         const newEl = {
@@ -395,7 +348,6 @@ function WhiteBoard() {
       const isShape =
         editingElement.type === TOOLS.RECTANGLE ||
         editingElement.type === TOOLS.CIRCLE;
-
       if (isShape) {
         const updated = elements.map((el) =>
           el.id === editingElement.id
@@ -420,24 +372,19 @@ function WhiteBoard() {
         }
       }
     }
-
     setEditingElement(null);
   };
-
   const cancelEditing = () => {
     setEditingElement(null);
   };
-
   // Pointer Down
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     if (editingElement) {
       saveTextAndClose();
       return;
     }
-
     if (activeTool === TOOLS.PAN || e.button === 1) {
       setActionState("panning");
       panStartRef.current = {
@@ -446,15 +393,11 @@ function WhiteBoard() {
       };
       return;
     }
-
     if (e.button !== 0) return;
-
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
-
     // 1. SELECT TOOL
     if (activeTool === TOOLS.SELECT) {
       const selected = elements.find((el) => el.id === selectedId);
-
       // Check Resize Handles
       if (selected && selected.type !== TOOLS.PENCIL) {
         const handle = getClickedResizeHandle(coords, selected);
@@ -466,13 +409,11 @@ function WhiteBoard() {
           return;
         }
       }
-
       // Check Rotation Handle
       if (selected && isOverRotationHandle(coords, selected)) {
         setActionState("rotating");
         return;
       }
-
       // Hit-test element
       const hit = [...elements]
         .reverse()
@@ -487,7 +428,6 @@ function WhiteBoard() {
       }
       return;
     }
-
     // 2. ERASER
     if (activeTool === TOOLS.ERASER) {
       const hit = [...elements]
@@ -499,7 +439,6 @@ function WhiteBoard() {
       }
       return;
     }
-
     // 3. STICKY NOTE
     if (activeTool === TOOLS.STICKY) {
       setEditingElement({
@@ -515,7 +454,6 @@ function WhiteBoard() {
       setActiveTool(TOOLS.SELECT);
       return;
     }
-
     // 4. TEXT
     if (activeTool === TOOLS.TEXT) {
       setEditingElement({
@@ -531,7 +469,6 @@ function WhiteBoard() {
       setActiveTool(TOOLS.SELECT);
       return;
     }
-
     // 5. DRAWING TOOLS (Can draw anywhere, including nested within other shapes)
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
@@ -557,14 +494,11 @@ function WhiteBoard() {
       });
     }
   };
-
   // Pointer Move
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
-
     // Hover cursor feedback in SELECT mode
     if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
@@ -582,7 +516,6 @@ function WhiteBoard() {
       }
       setCanvasCursor("default");
     }
-
     // Panning
     if (actionState === "panning") {
       setPanOffset({
@@ -591,28 +524,23 @@ function WhiteBoard() {
       });
       return;
     }
-
     // Resizing
     if (actionState === "resizing" && selectedId && initialElementRef.current) {
       const orig = initialElementRef.current;
       const angle = orig.angle || 0;
-
       const rad = -angle;
       const rawDx = coords.x - dragStartRef.current.x;
       const rawDy = coords.y - dragStartRef.current.y;
       const dx = rawDx * Math.cos(rad) - rawDy * Math.sin(rad);
       const dy = rawDx * Math.sin(rad) + rawDy * Math.cos(rad);
-
       let minX = Math.min(orig.x1, orig.x2);
       let maxX = Math.max(orig.x1, orig.x2);
       let minY = Math.min(orig.y1, orig.y2);
       let maxY = Math.max(orig.y1, orig.y2);
-
       if (resizeHandle.includes("e")) maxX += dx;
       if (resizeHandle.includes("s")) maxY += dy;
       if (resizeHandle.includes("w")) minX += dx;
       if (resizeHandle.includes("n")) minY += dy;
-
       if (maxX - minX >= 20 && maxY - minY >= 20) {
         setElements((prev) =>
           prev.map((el) =>
@@ -630,28 +558,23 @@ function WhiteBoard() {
       }
       return;
     }
-
     // Rotating
     if (actionState === "rotating" && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (!selected) return;
-
       const bounds = getElementBounds(selected);
       const rad =
         Math.atan2(coords.y - bounds.cy, coords.x - bounds.cx) + Math.PI / 2;
-
       setElements((prev) =>
         prev.map((el) => (el.id === selectedId ? { ...el, angle: rad } : el)),
       );
       return;
     }
-
     // Moving
     if (actionState === "moving" && selectedId) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
       dragStartRef.current = coords;
-
       setElements((prev) =>
         prev.map((el) => {
           if (el.id !== selectedId) return el;
@@ -672,7 +595,6 @@ function WhiteBoard() {
       );
       return;
     }
-
     // Drawing
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
@@ -689,12 +611,10 @@ function WhiteBoard() {
       }
     }
   };
-
   // Pointer Up
   const handlePointerUp = () => {
     if (actionState === "drawing" && currentElement) {
       let isValidShape = true;
-
       if (currentElement.type === TOOLS.PENCIL) {
         isValidShape =
           currentElement.points && currentElement.points.length > 1;
@@ -711,13 +631,11 @@ function WhiteBoard() {
           isValidShape = false;
         }
       }
-
       if (isValidShape) {
         commitToHistory([...elements, currentElement]);
         setSelectedId(currentElement.id);
         setActiveTool(TOOLS.SELECT);
       }
-
       setCurrentElement(null);
     } else if (
       actionState === "moving" ||
@@ -726,22 +644,18 @@ function WhiteBoard() {
     ) {
       commitToHistory(elements);
     }
-
     setActionState("none");
     setResizeHandle(null);
     initialElementRef.current = null;
   };
-
   // Double click to edit text or shapes
   const handleDoubleClick = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
     const hit = [...elements]
       .reverse()
       .find((el) => isPointInsideElement(coords, el));
-
     if (hit && hit.type !== TOOLS.PENCIL) {
       const bounds = getElementBounds(hit);
       const isShape = hit.type === TOOLS.RECTANGLE || hit.type === TOOLS.CIRCLE;
@@ -751,10 +665,8 @@ function WhiteBoard() {
       const editorHeight = isShape
         ? Math.max(bounds.height * 0.6, 50)
         : bounds.height;
-
       const editorX = isShape ? bounds.cx - editorWidth / 2 : bounds.x;
       const editorY = isShape ? bounds.cy - editorHeight / 2 : bounds.y;
-
       setEditingElement({
         id: hit.id,
         x: editorX,
@@ -769,7 +681,6 @@ function WhiteBoard() {
       setSelectedId(hit.id);
     }
   };
-
   return (
     <div
       aria-label="Canvas Workspace"
@@ -786,7 +697,6 @@ function WhiteBoard() {
         onDoubleClick={handleDoubleClick}
         className="block h-full w-full touch-none"
       />
-
       {/* Inline Editor Overlay */}
       {editingElement && (
         <div
@@ -835,7 +745,6 @@ function WhiteBoard() {
                   : "rounded-t-md border-2 border-b-0 border-dashed border-indigo-500 bg-white/95 font-sans text-slate-900 placeholder-slate-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
             }`}
           />
-
           <div
             className={`flex items-center justify-end gap-1.5 px-2 py-1 shadow-md ${
               editingElement.type === TOOLS.STICKY
@@ -866,5 +775,4 @@ function WhiteBoard() {
     </div>
   );
 }
-
 export default WhiteBoard;

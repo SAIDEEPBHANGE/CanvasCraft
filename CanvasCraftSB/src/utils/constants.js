@@ -10,7 +10,6 @@ export const TOOLS = {
   STICKY: "sticky",
   ERASER: "eraser",
 };
-
 export const DEFAULT_COLORS = [
   "#000000",
   "#ef4444",
@@ -18,14 +17,12 @@ export const DEFAULT_COLORS = [
   "#3b82f6",
   "#8b5cf6",
 ];
-
 export const ZOOM_CONFIG = {
   MIN: 0.1,
   MAX: 5.0,
   STEP: 0.1,
   DEFAULT: 1.0,
 };
-
 export const STROKE_CONFIG = {
   MIN_WIDTH: 1,
   MAX_WIDTH: 20,

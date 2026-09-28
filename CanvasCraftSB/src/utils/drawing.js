@@ -16,7 +16,6 @@ function drawArrowhead(ctx, fromX, fromY, toX, toY, headLength = 14) {
   );
   ctx.stroke();
 }
-
 /**
  * Calculates center, width, and height of any element
  */
@@ -37,12 +36,10 @@ export function getElementBounds(element) {
       cy: (minY + maxY) / 2,
     };
   }
-
   const minX = Math.min(element.x1, element.x2);
   const minY = Math.min(element.y1, element.y2);
   const width = Math.abs(element.x2 - element.x1);
   const height = Math.abs(element.y2 - element.y1);
-
   return {
     x: minX,
     y: minY,
@@ -52,7 +49,6 @@ export function getElementBounds(element) {
     cy: minY + height / 2,
   };
 }
-
 /**
  * Returns positions of 8 resize handles in unrotated local coordinate space
  */
@@ -62,7 +58,6 @@ export function getResizeHandles(element, padding = 6) {
   const y = bounds.y - padding;
   const w = bounds.width + padding * 2;
   const h = bounds.height + padding * 2;
-
   return {
     nw: { x, y, cursor: "nwse-resize" },
     n: { x: x + w / 2, y, cursor: "ns-resize" },
@@ -74,7 +69,6 @@ export function getResizeHandles(element, padding = 6) {
     w: { x, y: y + h / 2, cursor: "ew-resize" },
   };
 }
-
 function drawCardRect(ctx, x, y, width, height, radius = 6) {
   ctx.beginPath();
   if (typeof ctx.roundRect === "function") {
@@ -83,7 +77,6 @@ function drawCardRect(ctx, x, y, width, height, radius = 6) {
     ctx.rect(x, y, width, height);
   }
 }
-
 /**
  * Draws the bounding box, 8 resize handles, and rotation handle
  */
@@ -91,48 +84,40 @@ export function renderSelectionBox(ctx, element) {
   const bounds = getElementBounds(element);
   const angle = element.angle || 0;
   const padding = 6;
-
   ctx.save();
   if (angle !== 0) {
     ctx.translate(bounds.cx, bounds.cy);
     ctx.rotate(angle);
     ctx.translate(-bounds.cx, -bounds.cy);
   }
-
   const x = bounds.x - padding;
   const y = bounds.y - padding;
   const w = bounds.width + padding * 2;
   const h = bounds.height + padding * 2;
-
   // Dashed outline
   ctx.strokeStyle = "#6366f1";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 4]);
   ctx.strokeRect(x, y, w, h);
   ctx.setLineDash([]);
-
   // Rotation Handle
   const handleDistance = 22;
   const handleX = x + w / 2;
   const handleY = y - handleDistance;
-
   ctx.beginPath();
   ctx.moveTo(x + w / 2, y);
   ctx.lineTo(handleX, handleY);
   ctx.strokeStyle = "#6366f1";
   ctx.stroke();
-
   ctx.fillStyle = "#ffffff";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(handleX, handleY, 4.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-
   // 8 Resize Handles
   const handles = getResizeHandles(element, padding);
   const handleSize = 7;
-
   Object.values(handles).forEach((hPos) => {
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#6366f1";
@@ -150,38 +135,30 @@ export function renderSelectionBox(ctx, element) {
       handleSize,
     );
   });
-
   ctx.restore();
 }
-
 /**
  * Renders centered, auto-wrapping text inside rectangle or circle shapes
  */
 function renderCenteredShapeText(ctx, element, bounds) {
   if (!element.text) return;
-
   const isDark = document.documentElement.classList.contains("dark");
   let textColor = element.strokeColor || "#000000";
   if (isDark && (textColor === "#000000" || textColor === "#000")) {
     textColor = "#f8fafc";
   }
-
   ctx.fillStyle = textColor;
   ctx.font = "15px 'Inter', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
   const padding = 12;
   const maxWidth = Math.max(bounds.width - padding * 2, 20);
   const lineHeight = 20;
-
   const paragraphs = element.text.split("\n");
   const lines = [];
-
   for (const para of paragraphs) {
     const words = para.split(" ");
     let currentLine = "";
-
     for (let n = 0; n < words.length; n++) {
       const testLine = currentLine ? `${currentLine} ${words[n]}` : words[n];
       const metrics = ctx.measureText(testLine);
@@ -194,35 +171,28 @@ function renderCenteredShapeText(ctx, element, bounds) {
     }
     lines.push(currentLine);
   }
-
   const totalHeight = lines.length * lineHeight;
   const startY = bounds.cy - totalHeight / 2 + lineHeight / 2;
-
   lines.forEach((line, index) => {
     ctx.fillText(line, bounds.cx, startY + index * lineHeight);
   });
 }
-
 /**
  * Main render function for canvas elements
  */
 export function renderElement(ctx, element) {
   const { type, strokeColor, strokeWidth, angle = 0 } = element;
   const bounds = getElementBounds(element);
-
   ctx.save();
-
   if (angle !== 0) {
     ctx.translate(bounds.cx, bounds.cy);
     ctx.rotate(angle);
     ctx.translate(-bounds.cx, -bounds.cy);
   }
-
   ctx.strokeStyle = strokeColor || "#000000";
   ctx.lineWidth = strokeWidth || 2;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-
   switch (type) {
     case "pencil": {
       const { points } = element;
@@ -235,7 +205,6 @@ export function renderElement(ctx, element) {
       ctx.stroke();
       break;
     }
-
     case "rectangle": {
       ctx.beginPath();
       ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
@@ -243,7 +212,6 @@ export function renderElement(ctx, element) {
       renderCenteredShapeText(ctx, element, bounds);
       break;
     }
-
     case "circle": {
       ctx.beginPath();
       ctx.ellipse(
@@ -259,7 +227,6 @@ export function renderElement(ctx, element) {
       renderCenteredShapeText(ctx, element, bounds);
       break;
     }
-
     case "line": {
       ctx.beginPath();
       ctx.moveTo(element.x1, element.y1);
@@ -267,7 +234,6 @@ export function renderElement(ctx, element) {
       ctx.stroke();
       break;
     }
-
     case "arrow": {
       ctx.beginPath();
       ctx.moveTo(element.x1, element.y1);
@@ -276,39 +242,32 @@ export function renderElement(ctx, element) {
       drawArrowhead(ctx, element.x1, element.y1, element.x2, element.y2);
       break;
     }
-
     case "sticky": {
       ctx.save();
       ctx.shadowColor = "rgba(0, 0, 0, 0.18)";
       ctx.shadowBlur = 12;
       ctx.shadowOffsetY = 4;
-
       ctx.fillStyle = element.bgColor || "#fef08a";
       drawCardRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
       ctx.fill();
       ctx.restore();
-
       ctx.strokeStyle = element.strokeColor || "#eab308";
       ctx.lineWidth = 1.5;
       drawCardRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
       ctx.stroke();
-
       if (element.text) {
         ctx.fillStyle = "#1e293b";
         ctx.font = "14px 'Inter', sans-serif";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
-
         const padding = 12;
         const maxWidth = bounds.width - padding * 2;
         const lineHeight = 18;
         let yPos = bounds.y + padding;
-
         const paragraphs = element.text.split("\n");
         for (const para of paragraphs) {
           const words = para.split(" ");
           let line = "";
-
           for (let n = 0; n < words.length; n++) {
             const testLine = line + words[n] + " ";
             const metrics = ctx.measureText(testLine);
@@ -326,7 +285,6 @@ export function renderElement(ctx, element) {
       }
       break;
     }
-
     case "text": {
       if (element.text) {
         const isDark = document.documentElement.classList.contains("dark");
@@ -334,12 +292,10 @@ export function renderElement(ctx, element) {
         if (isDark && (textColor === "#000000" || textColor === "#000")) {
           textColor = "#f8fafc";
         }
-
         ctx.fillStyle = textColor;
         ctx.font = "18px 'Inter', sans-serif";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
-
         const lines = element.text.split("\n");
         lines.forEach((line, i) => {
           ctx.fillText(line, bounds.x + 4, bounds.y + 4 + i * 22);
@@ -347,10 +303,8 @@ export function renderElement(ctx, element) {
       }
       break;
     }
-
     default:
       break;
   }
-
   ctx.restore();
 }

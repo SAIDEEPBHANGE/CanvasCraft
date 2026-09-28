@@ -1,6 +1,5 @@
 import LeftHeader from "./HeaderComponents/LeftHeader";
 import RightHeader from "./HeaderComponents/RightHeader";
-
 function Header() {
   return (
     <header className="flex w-full items-center justify-between">
@@ -13,5 +12,4 @@ function Header() {
     </header>
   );
 }
-
 export default Header;

@@ -12,19 +12,15 @@ import { useTheme } from "../context/ThemeContext";
 import { useCanvas } from "../context/CanvasContext";
 import { exportCanvasToPNG } from "../utils/export";
 import ShortcutsModal from "../RightHeaderComponents/ShortcutsModal";
-
 function RightHeader() {
   const { theme, toggleTheme } = useTheme();
   const { undo, redo, clearCanvas, canvasRef } = useCanvas();
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-
   const handleExport = () => {
     exportCanvasToPNG(canvasRef.current, "canvascraft", theme === "dark");
   };
-
   const iconBtnClass =
     "flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800";
-
   return (
     <>
       <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-white/95 p-1 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:gap-1.5 sm:p-1.5">
@@ -39,7 +35,6 @@ function RightHeader() {
         >
           <Undo2 className="h-4 w-4" />
         </button>
-
         {/* Redo */}
         <button
           id="redoBtn"
@@ -51,7 +46,6 @@ function RightHeader() {
         >
           <Redo2 className="h-4 w-4" />
         </button>
-
         {/* Shortcuts Trigger Button */}
         <button
           id="shortcutsBtn"
@@ -63,9 +57,7 @@ function RightHeader() {
         >
           <Keyboard className="h-4 w-4" />
         </button>
-
         <div className="mx-0.5 h-4 w-px bg-slate-200 dark:bg-slate-700 sm:mx-1" />
-
         {/* Theme Toggle */}
         <button
           id="themeToggle"
@@ -81,7 +73,6 @@ function RightHeader() {
             <Moon className="h-4 w-4 text-slate-600 transition-transform hover:-rotate-12" />
           )}
         </button>
-
         {/* Clear Canvas */}
         <button
           id="clearCanvas"
@@ -93,7 +84,6 @@ function RightHeader() {
           <Trash2 className="h-4 w-4 sm:hidden" />
           <span className="hidden sm:inline">Clear</span>
         </button>
-
         {/* Timestamped Export */}
         <button
           id="exportBtn"
@@ -106,7 +96,6 @@ function RightHeader() {
           <span className="hidden sm:inline">Export</span>
         </button>
       </div>
-
       {/* Keyboard Shortcuts Modal */}
       <ShortcutsModal
         isOpen={isShortcutsOpen}
@@ -115,5 +104,4 @@ function RightHeader() {
     </>
   );
 }
-
 export default RightHeader;

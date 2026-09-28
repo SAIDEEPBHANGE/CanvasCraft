@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { X, Keyboard } from "lucide-react";
-
 const SHORTCUT_GROUPS = [
   {
     category: "Tools",
@@ -30,7 +29,6 @@ const SHORTCUT_GROUPS = [
     ],
   },
 ];
-
 function ShortcutsModal({ isOpen, onClose }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -41,9 +39,7 @@ function ShortcutsModal({ isOpen, onClose }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
-
   if (!isOpen) return null;
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
@@ -72,7 +68,6 @@ function ShortcutsModal({ isOpen, onClose }) {
             <X className="h-4 w-4" />
           </button>
         </div>
-
         {/* Content list */}
         <div className="mt-4 max-h-[60vh] space-y-4 overflow-y-auto pr-1 no-scrollbar">
           {SHORTCUT_GROUPS.map((group) => (
@@ -102,5 +97,4 @@ function ShortcutsModal({ isOpen, onClose }) {
     </div>
   );
 }
-
 export default ShortcutsModal;
