@@ -1,7 +1,6 @@
 # CanvasCraft — Collaborative & Interactive Whiteboard
 
 [CanvasCraft Web Link](https://canvascraftsb.netlify.app/)
-
 ![CanvasCraft Light Desktop](/Versions/V02/V02-CanvasCraft-Light-lg.png)
 ![CanvasCraft Dark Desktop](/Versions/V02/V02-CanvasCraft-Dark-lg.png)
 
@@ -37,19 +36,19 @@
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>V</kbd> or <kbd>1</kbd> | Selection Tool |
-| <kbd>H</kbd> | Pan (Hand) Tool |
-| <kbd>R</kbd> or <kbd>2</kbd> | Rectangle Tool |
-| <kbd>C</kbd> or <kbd>3</kbd> | Circle Tool |
-| <kbd>A</kbd> or <kbd>4</kbd> | Arrow Tool |
-| <kbd>L</kbd> or <kbd>5</kbd> | Line Tool |
-| <kbd>P</kbd> or <kbd>6</kbd> | Pencil (Freehand) Tool |
-| <kbd>T</kbd> or <kbd>7</kbd> | Text Tool |
-| <kbd>S</kbd> or <kbd>8</kbd> | Sticky Note Tool |
-| <kbd>E</kbd> or <kbd>9</kbd> | Eraser Tool |
-| <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete Selected Shape |
-| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo |
-| <kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl+Shift+Z</kbd> | Redo |
-| <kbd>Mouse Wheel</kbd> / <kbd>Pinch</kbd> | Cursor-Centered Zoom |
+| Shortcut                                                 | Action                 |
+| :------------------------------------------------------- | :--------------------- |
+| <kbd>V</kbd> or <kbd>1</kbd>                             | Selection Tool         |
+| <kbd>H</kbd>                                             | Pan (Hand) Tool        |
+| <kbd>R</kbd> or <kbd>2</kbd>                             | Rectangle Tool         |
+| <kbd>C</kbd> or <kbd>3</kbd>                             | Circle Tool            |
+| <kbd>A</kbd> or <kbd>4</kbd>                             | Arrow Tool             |
+| <kbd>L</kbd> or <kbd>5</kbd>                             | Line Tool              |
+| <kbd>P</kbd> or <kbd>6</kbd>                             | Pencil (Freehand) Tool |
+| <kbd>T</kbd> or <kbd>7</kbd>                             | Text Tool              |
+| <kbd>S</kbd> or <kbd>8</kbd>                             | Sticky Note Tool       |
+| <kbd>E</kbd> or <kbd>9</kbd>                             | Eraser Tool            |
+| <kbd>Delete</kbd> / <kbd>Backspace</kbd>                 | Delete Selected Shape  |
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd>                           | Undo                   |
+| <kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl+Shift+Z</kbd> | Redo                   |
+| <kbd>Mouse Wheel</kbd> / <kbd>Pinch</kbd>                | Cursor-Centered Zoom   |
