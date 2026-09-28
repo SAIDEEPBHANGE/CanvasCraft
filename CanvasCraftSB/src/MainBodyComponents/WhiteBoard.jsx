@@ -399,13 +399,13 @@ function WhiteBoard() {
     if (activeTool === TOOLS.SELECT) {
       const selected = elements.find((el) => el.id === selectedId);
       // Check Resize Handles
-      if (selected && selected.type !== TOOLS.PENCIL) {
+      if (selected) {
         const handle = getClickedResizeHandle(coords, selected);
         if (handle) {
           setActionState("resizing");
           setResizeHandle(handle);
           dragStartRef.current = coords;
-          initialElementRef.current = { ...selected };
+          initialElementRef.current = JSON.parse(JSON.stringify(selected));
           return;
         }
       }
@@ -498,11 +498,13 @@ function WhiteBoard() {
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
-    // Hover cursor feedback in SELECT mode
+
+    // Hover cursor feedback in SELECT mode (Works for ALL elements including PENCIL)
     if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
-      if (selected && selected.type !== TOOLS.PENCIL) {
+      if (selected) {
         const handle = getClickedResizeHandle(coords, selected);
         if (handle) {
           const handles = getResizeHandles(selected);
@@ -516,6 +518,7 @@ function WhiteBoard() {
       }
       setCanvasCursor("default");
     }
+
     // Panning
     if (actionState === "panning") {
       setPanOffset({
@@ -524,57 +527,96 @@ function WhiteBoard() {
       });
       return;
     }
-    // Resizing
+
+    // Resizing (Supports both geometric shapes and freehand pencil points)
     if (actionState === "resizing" && selectedId && initialElementRef.current) {
       const orig = initialElementRef.current;
       const angle = orig.angle || 0;
+
+      // Project delta in unrotated local space
       const rad = -angle;
       const rawDx = coords.x - dragStartRef.current.x;
       const rawDy = coords.y - dragStartRef.current.y;
       const dx = rawDx * Math.cos(rad) - rawDy * Math.sin(rad);
       const dy = rawDx * Math.sin(rad) + rawDy * Math.cos(rad);
-      let minX = Math.min(orig.x1, orig.x2);
-      let maxX = Math.max(orig.x1, orig.x2);
-      let minY = Math.min(orig.y1, orig.y2);
-      let maxY = Math.max(orig.y1, orig.y2);
+
+      const origBounds = getElementBounds(orig);
+
+      let minX = origBounds.x;
+      let maxX = origBounds.x + origBounds.width;
+      let minY = origBounds.y;
+      let maxY = origBounds.y + origBounds.height;
+
       if (resizeHandle.includes("e")) maxX += dx;
       if (resizeHandle.includes("s")) maxY += dy;
       if (resizeHandle.includes("w")) minX += dx;
       if (resizeHandle.includes("n")) minY += dy;
-      if (maxX - minX >= 20 && maxY - minY >= 20) {
-        setElements((prev) =>
-          prev.map((el) =>
-            el.id === selectedId
-              ? {
-                  ...el,
-                  x1: minX,
-                  y1: minY,
-                  x2: maxX,
-                  y2: maxY,
-                }
-              : el,
-          ),
-        );
+
+      const newWidth = maxX - minX;
+      const newHeight = maxY - minY;
+
+      if (newWidth >= 20 && newHeight >= 20) {
+        if (orig.type === TOOLS.PENCIL) {
+          // Proportionally scale every point in the freehand path
+          const scaleX = newWidth / Math.max(origBounds.width, 1);
+          const scaleY = newHeight / Math.max(origBounds.height, 1);
+
+          const scaledPoints = orig.points.map((pt) => ({
+            x: minX + (pt.x - origBounds.x) * scaleX,
+            y: minY + (pt.y - origBounds.y) * scaleY,
+          }));
+
+          setElements((prev) =>
+            prev.map((el) =>
+              el.id === selectedId
+                ? {
+                    ...el,
+                    points: scaledPoints,
+                  }
+                : el
+            )
+          );
+        } else {
+          // Standard geometric shapes, text, and sticky notes
+          setElements((prev) =>
+            prev.map((el) =>
+              el.id === selectedId
+                ? {
+                    ...el,
+                    x1: minX,
+                    y1: minY,
+                    x2: maxX,
+                    y2: maxY,
+                  }
+                : el
+            )
+          );
+        }
       }
       return;
     }
+
     // Rotating
     if (actionState === "rotating" && selectedId) {
       const selected = elements.find((el) => el.id === selectedId);
       if (!selected) return;
+
       const bounds = getElementBounds(selected);
       const rad =
         Math.atan2(coords.y - bounds.cy, coords.x - bounds.cx) + Math.PI / 2;
+
       setElements((prev) =>
-        prev.map((el) => (el.id === selectedId ? { ...el, angle: rad } : el)),
+        prev.map((el) => (el.id === selectedId ? { ...el, angle: rad } : el))
       );
       return;
     }
+
     // Moving
     if (actionState === "moving" && selectedId) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
       dragStartRef.current = coords;
+
       setElements((prev) =>
         prev.map((el) => {
           if (el.id !== selectedId) return el;
@@ -591,10 +633,11 @@ function WhiteBoard() {
             x2: el.x2 + dx,
             y2: el.y2 + dy,
           };
-        }),
+        })
       );
       return;
     }
+
     // Drawing
     if (actionState === "drawing" && currentElement) {
       if (activeTool === TOOLS.PENCIL) {
