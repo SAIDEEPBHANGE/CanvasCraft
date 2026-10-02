@@ -39,6 +39,37 @@ function WhiteBoard() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
+  // 16px hollow circle cursor for the eraser
+  const ERASER_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="%2364748b" stroke-width="1.5"/></svg>') 10 10, crosshair`;
+  useEffect(() => {
+    setCanvasCursor(getToolCursor(activeTool, actionState));
+  }, [activeTool, actionState]);
+  const getToolCursor = (tool, actionState) => {
+    // Active dragging / panning takes highest priority
+    if (actionState === "panning") return "grabbing";
+    if (actionState === "moving") return "move";
+    if (actionState === "rotating") return "grabbing";
+    if (actionState === "resizing") return ""; // Handled dynamically by handle positions
+    switch (tool) {
+      case TOOLS.PAN:
+        return "grab";
+      case TOOLS.ERASER:
+        return ERASER_CURSOR;
+      case TOOLS.SELECT:
+        return "default";
+      // All creation tools get the precise crosshair (+) cursor
+      case TOOLS.PENCIL:
+      case TOOLS.RECTANGLE:
+      case TOOLS.CIRCLE:
+      case TOOLS.LINE:
+      case TOOLS.ARROW:
+      case TOOLS.TEXT:
+      case TOOLS.STICKY:
+        return "crosshair";
+      default:
+        return "default";
+    }
+  };
   // Commit state changes to Undo/Redo history
   const commitToHistory = useCallback(
     (newElements) => {
@@ -514,7 +545,9 @@ function WhiteBoard() {
         setCanvasCursor("grab");
         return;
       }
-      setCanvasCursor("default");
+      if (actionState === "none") {
+        setCanvasCursor(getToolCursor(activeTool, actionState));
+      }
     }
 
     // Panning
@@ -730,6 +763,7 @@ function WhiteBoard() {
       <canvas
         id="whiteboard"
         ref={canvasRef}
+        style={{ cursor: canvasCursor }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
