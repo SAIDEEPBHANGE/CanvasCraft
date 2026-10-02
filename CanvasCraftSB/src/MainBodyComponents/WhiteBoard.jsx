@@ -451,7 +451,6 @@ function WhiteBoard() {
         type: TOOLS.STICKY,
         isNew: true,
       });
-      setActiveTool(TOOLS.SELECT);
       return;
     }
     // 4. TEXT
@@ -466,7 +465,6 @@ function WhiteBoard() {
         type: TOOLS.TEXT,
         isNew: true,
       });
-      setActiveTool(TOOLS.SELECT);
       return;
     }
     // 5. DRAWING TOOLS (Can draw anywhere, including nested within other shapes)
@@ -573,8 +571,8 @@ function WhiteBoard() {
                     ...el,
                     points: scaledPoints,
                   }
-                : el
-            )
+                : el,
+            ),
           );
         } else {
           // Standard geometric shapes, text, and sticky notes
@@ -588,8 +586,8 @@ function WhiteBoard() {
                     x2: maxX,
                     y2: maxY,
                   }
-                : el
-            )
+                : el,
+            ),
           );
         }
       }
@@ -606,7 +604,7 @@ function WhiteBoard() {
         Math.atan2(coords.y - bounds.cy, coords.x - bounds.cx) + Math.PI / 2;
 
       setElements((prev) =>
-        prev.map((el) => (el.id === selectedId ? { ...el, angle: rad } : el))
+        prev.map((el) => (el.id === selectedId ? { ...el, angle: rad } : el)),
       );
       return;
     }
@@ -633,7 +631,7 @@ function WhiteBoard() {
             x2: el.x2 + dx,
             y2: el.y2 + dy,
           };
-        })
+        }),
       );
       return;
     }
@@ -677,7 +675,6 @@ function WhiteBoard() {
       if (isValidShape) {
         commitToHistory([...elements, currentElement]);
         setSelectedId(currentElement.id);
-        setActiveTool(TOOLS.SELECT);
       }
       setCurrentElement(null);
     } else if (
