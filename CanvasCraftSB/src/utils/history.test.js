@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appendHistory, navigateHistory } from "./history.js";
+import {
+  MAX_HISTORY_STEPS,
+  appendHistory,
+  navigateHistory,
+} from "./history.js";
 
 test("appends a new state to history", () => {
   const initial = [];
@@ -50,4 +54,18 @@ test("returns null when undo or redo is unavailable", () => {
 
 test("rejects unsupported navigation directions", () => {
   assert.throws(() => navigateHistory([[]], 0, "jump"), RangeError);
+});
+
+test("history is capped and keeps the most recent states", () => {
+  let history = [[]];
+  let step = 0;
+  for (let i = 1; i <= MAX_HISTORY_STEPS + 20; i++) {
+    ({ history, historyStep: step } = appendHistory(history, step, [
+      { id: i },
+    ]));
+  }
+
+  assert.equal(history.length, MAX_HISTORY_STEPS);
+  assert.equal(step, MAX_HISTORY_STEPS - 1);
+  assert.deepEqual(history[step], [{ id: MAX_HISTORY_STEPS + 20 }]);
 });

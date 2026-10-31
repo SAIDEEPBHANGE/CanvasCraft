@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCanvas } from "../context/useCanvas";
-import { TOOLS } from "../utils/constants";
+import { useTheme } from "../context/useTheme";
+import { TOOLS, ZOOM_CONFIG } from "../utils/constants";
 import { getCanvasCoordinates } from "../utils/coordinates";
-import { appendHistory, navigateHistory } from "../utils/history";
+import { createId } from "../utils/id";
+import { getPinchSnapshot, getPinchViewport } from "../utils/viewport";
+import { navigateHistory } from "../utils/history";
 import {
   renderElement,
   renderSelectionBox,
@@ -52,12 +55,13 @@ function WhiteBoard() {
     setElements,
     history,
     historyStep,
-    setHistory,
     setHistoryStep,
+    commitElements: commitToHistory,
     selectedId,
     setSelectedId,
     canvasRef,
   } = useCanvas();
+  const { theme } = useTheme();
   const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "resizing" | "panning"
   const [resizeHandle, setResizeHandle] = useState(null);
   const [currentElement, setCurrentElement] = useState(null);
@@ -85,16 +89,8 @@ function WhiteBoard() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
-  // Commit state changes to Undo/Redo history
-  const commitToHistory = useCallback(
-    (newElements) => {
-      setElements(newElements);
-      const next = appendHistory(history, historyStep, newElements);
-      setHistory(next.history);
-      setHistoryStep(next.historyStep);
-    },
-    [setElements, setHistory, setHistoryStep, history, historyStep],
-  );
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
   // Focus textarea when editing starts
   useEffect(() => {
     if (editingElement && textareaRef.current) {
@@ -128,15 +124,15 @@ function WhiteBoard() {
     elements.forEach((element) => {
       if (editingElement && editingElement.id === element.id) {
         if (element.type === TOOLS.STICKY) {
-          renderElement(ctx, { ...element, text: "" });
+          renderElement(ctx, { ...element, text: "" }, theme);
         }
         return;
       }
-      renderElement(ctx, element);
+      renderElement(ctx, element, theme);
     });
     // 2. Draw active shape preview
     if (currentElement) {
-      renderElement(ctx, currentElement);
+      renderElement(ctx, currentElement, theme);
     }
     // 3. Draw selection box & resize/rotation handles
     if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
@@ -154,6 +150,7 @@ function WhiteBoard() {
     zoom,
     panOffset,
     editingElement,
+    theme,
   ]);
   // Canvas resize and retina DPI sync
   useEffect(() => {
@@ -181,6 +178,11 @@ function WhiteBoard() {
     const handleKeyDown = (e) => {
       const tag = e.target.tagName.toLowerCase();
       if (tag === "input" || tag === "textarea" || editingElement) {
+        return;
+      }
+      if (e.target.closest?.('[role="dialog"]')) return;
+      if (e.key === "Escape") {
+        setSelectedId(null);
         return;
       }
       const key = e.key.toLowerCase();
@@ -287,8 +289,8 @@ function WhiteBoard() {
       }
       const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
       const newZoom = Math.min(
-        Math.max(Number((zoom * zoomFactor).toFixed(3)), 0.1),
-        5.0,
+        Math.max(Number((zoom * zoomFactor).toFixed(3)), ZOOM_CONFIG.MIN),
+        ZOOM_CONFIG.MAX,
       );
       if (newZoom === zoom) return;
       const newPanX = mouseX - (mouseX - panOffset.x) * (newZoom / zoom);
@@ -406,6 +408,25 @@ function WhiteBoard() {
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (e.pointerType === "touch") {
+      pointersRef.current.set(e.pointerId, e);
+      if (pointersRef.current.size >= 2) {
+        // A second finger turns the gesture into pinch/pan and cancels any drawing or drag.
+        const [a, b] = [...pointersRef.current.values()];
+        if (actionState === "moving" || actionState === "rotating" || actionState === "resizing") {
+          setElements(history[historyStep]);
+        }
+        setCurrentElement(null);
+        setActionState("none");
+        pinchRef.current = getPinchSnapshot(a, b, zoom, panOffset);
+        return;
+      }
+    }
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // Capture is best-effort; synthetic events have no active pointer.
+    }
     if (editingElement) {
       saveTextAndClose();
       return;
@@ -467,7 +488,7 @@ function WhiteBoard() {
     // 3. STICKY NOTE
     if (activeTool === TOOLS.STICKY) {
       setEditingElement({
-        id: Date.now(),
+        id: createId(),
         x: coords.x,
         y: coords.y,
         width: 180,
@@ -481,7 +502,7 @@ function WhiteBoard() {
     // 4. TEXT
     if (activeTool === TOOLS.TEXT) {
       setEditingElement({
-        id: Date.now(),
+        id: createId(),
         x: coords.x,
         y: coords.y,
         width: 220,
@@ -496,7 +517,7 @@ function WhiteBoard() {
     setActionState("drawing");
     if (activeTool === TOOLS.PENCIL) {
       setCurrentElement({
-        id: Date.now(),
+        id: createId(),
         type: TOOLS.PENCIL,
         points: [coords],
         strokeColor,
@@ -505,7 +526,7 @@ function WhiteBoard() {
       });
     } else {
       setCurrentElement({
-        id: Date.now(),
+        id: createId(),
         type: activeTool,
         x1: coords.x,
         y1: coords.y,
@@ -521,6 +542,29 @@ function WhiteBoard() {
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    if (e.pointerType === "touch" && pointersRef.current.has(e.pointerId)) {
+      pointersRef.current.set(e.pointerId, e);
+      if (pointersRef.current.size >= 2) {
+        if (pinchRef.current) {
+          const [a, b] = [...pointersRef.current.values()];
+          const result = getPinchViewport({
+            previous: pinchRef.current,
+            touchA: a,
+            touchB: b,
+            rect: canvas.getBoundingClientRect(),
+            minZoom: ZOOM_CONFIG.MIN,
+            maxZoom: ZOOM_CONFIG.MAX,
+          });
+          if (result) {
+            pinchRef.current = result.snapshot;
+            setZoom(result.zoom);
+            setPanOffset(result.panOffset);
+          }
+        }
+        return;
+      }
+    }
 
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
@@ -680,7 +724,20 @@ function WhiteBoard() {
     }
   };
   // Pointer Up
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
+    const canvas = canvasRef.current;
+    if (e?.pointerType === "touch") {
+      pointersRef.current.delete(e.pointerId);
+      if (pinchRef.current) {
+        if (pointersRef.current.size < 2) pinchRef.current = null;
+        return;
+      }
+    }
+    try {
+      canvas?.releasePointerCapture(e.pointerId);
+    } catch {
+      // Already released.
+    }
     if (actionState === "drawing" && currentElement) {
       let isValidShape = true;
       if (currentElement.type === TOOLS.PENCIL) {
@@ -761,7 +818,7 @@ function WhiteBoard() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         className="block h-full w-full touch-none"
       />

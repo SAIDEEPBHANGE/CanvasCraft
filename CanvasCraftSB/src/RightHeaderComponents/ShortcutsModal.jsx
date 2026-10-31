@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X, Keyboard } from "lucide-react";
 const SHORTCUT_GROUPS = [
   {
@@ -30,14 +30,36 @@ const SHORTCUT_GROUPS = [
   },
 ];
 function ShortcutsModal({ isOpen, onClose }) {
+  const dialogRef = useRef(null);
   useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement;
+    const focusables = () =>
+      dialogRef.current?.querySelectorAll("button, [href], input, [tabindex]") ??
+      [];
+    focusables()[0]?.focus();
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape") {
         onClose();
+      } else if (e.key === "Tab") {
+        const items = [...focusables()];
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
   }, [isOpen, onClose]);
   if (!isOpen) return null;
   return (
@@ -46,6 +68,10 @@ function ShortcutsModal({ isOpen, onClose }) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shortcuts-title"
         className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-2xl backdrop-blur-md transition-all dark:border-slate-800 dark:bg-slate-900/95"
         onClick={(e) => e.stopPropagation()}
       >
@@ -55,7 +81,10 @@ function ShortcutsModal({ isOpen, onClose }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
               <Keyboard className="h-4 w-4 stroke-[2.2]" />
             </div>
-            <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm sm:text-base">
+            <h3
+              id="shortcuts-title"
+              className="font-semibold text-slate-800 dark:text-slate-100 text-sm sm:text-base"
+            >
               Keyboard Shortcuts
             </h3>
           </div>

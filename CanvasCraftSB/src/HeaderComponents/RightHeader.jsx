@@ -31,6 +31,7 @@ function RightHeader() {
           onClick={undo}
           title="Undo (Ctrl+Z)"
           aria-label="Undo"
+          aria-label="Undo"
           className={iconBtnClass}
         >
           <Undo2 className="h-4 w-4" />
@@ -42,6 +43,7 @@ function RightHeader() {
           onClick={redo}
           title="Redo (Ctrl+Y)"
           aria-label="Redo"
+          aria-label="Redo"
           className={iconBtnClass}
         >
           <Redo2 className="h-4 w-4" />
@@ -52,6 +54,7 @@ function RightHeader() {
           type="button"
           onClick={() => setIsShortcutsOpen(true)}
           title="Keyboard Shortcuts (?)"
+          aria-label="Keyboard shortcuts"
           aria-label="View Keyboard Shortcuts"
           className={iconBtnClass}
         >
@@ -64,6 +67,7 @@ function RightHeader() {
           type="button"
           onClick={toggleTheme}
           title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           aria-label="Toggle Theme"
           className={iconBtnClass}
         >
@@ -79,6 +83,7 @@ function RightHeader() {
           type="button"
           onClick={clearCanvas}
           title="Clear Canvas"
+          aria-label="Clear canvas"
           className="flex h-8 items-center justify-center rounded-lg px-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-slate-800 sm:px-2.5"
         >
           <Trash2 className="h-4 w-4 sm:hidden" />
@@ -90,6 +95,7 @@ function RightHeader() {
           type="button"
           onClick={handleExport}
           title="Export as PNG"
+          aria-label="Export as PNG"
           className="flex h-8 items-center justify-center rounded-lg bg-indigo-600 px-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 sm:px-3"
         >
           <Download className="h-4 w-4 sm:hidden" />

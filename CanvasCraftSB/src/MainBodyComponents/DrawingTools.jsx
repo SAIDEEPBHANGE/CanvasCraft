@@ -61,6 +61,8 @@ function DrawingTools() {
                 onClick={() => setActiveTool(item.id)}
                 className={`relative ${getToolBtnClass(item.id)}`}
                 title={`${item.label} (${item.shortcut})`}
+                aria-label={item.label}
+                aria-pressed={activeTool === item.id}
               >
                 <Icon className="h-4 w-4 stroke-2" />
                 <span className="absolute bottom-0.5 right-1 select-none font-mono text-[9px] font-semibold leading-none opacity-60">

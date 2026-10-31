@@ -1,101 +1,83 @@
-import { useState, useEffect, useRef } from "react";
-import { TOOLS, STROKE_CONFIG, ZOOM_CONFIG } from "../utils/constants";
-import { navigateHistory } from "../utils/history";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { TOOLS, ZOOM_CONFIG } from "../utils/constants";
+import { appendHistory, navigateHistory } from "../utils/history";
+import { reorderElement } from "../utils/layering";
+import {
+  readJson,
+  sanitizeElements,
+  sanitizePreferences,
+  sanitizeViewport,
+  writeJson,
+} from "../utils/persistence";
 import { CanvasContext } from "./canvasContextValue";
 const STORAGE_KEYS = {
   ELEMENTS: "canvascraft_elements",
   VIEWPORT: "canvascraft_viewport",
   PREFERENCES: "canvascraft_prefs",
 };
-// Safe helper to read from localStorage
-const getSavedState = (key, fallback) => {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : fallback;
-  } catch (err) {
-    console.warn(`Error reading ${key} from localStorage:`, err);
-    return fallback;
-  }
-};
+const loadInitialState = () => ({
+  elements: sanitizeElements(readJson(STORAGE_KEYS.ELEMENTS, [])),
+  viewport: sanitizeViewport(readJson(STORAGE_KEYS.VIEWPORT, null)),
+  prefs: sanitizePreferences(readJson(STORAGE_KEYS.PREFERENCES, null)),
+});
 export function CanvasProvider({ children }) {
-  // 1. Initial State hydrated directly from localStorage
-  const savedElements = getSavedState(STORAGE_KEYS.ELEMENTS, []);
-  const savedViewport = getSavedState(STORAGE_KEYS.VIEWPORT, {
-    zoom: ZOOM_CONFIG.DEFAULT,
-    panOffset: { x: 0, y: 0 },
-  });
-  const savedPrefs = getSavedState(STORAGE_KEYS.PREFERENCES, {
-    strokeColor: STROKE_CONFIG.DEFAULT_COLOR,
-    strokeWidth: STROKE_CONFIG.DEFAULT_WIDTH,
-  });
-  // State initialization
+  // 1. Initial state is read (and validated) once, not on every render
+  const [initial] = useState(loadInitialState);
   const [activeTool, setActiveTool] = useState(TOOLS.SELECT);
-  const [strokeColor, setStrokeColor] = useState(savedPrefs.strokeColor);
-  const [strokeWidth, setStrokeWidth] = useState(savedPrefs.strokeWidth);
-  const [zoom, setZoom] = useState(savedViewport.zoom);
-  const [panOffset, setPanOffset] = useState(savedViewport.panOffset);
-  const [elements, setElements] = useState(savedElements);
-  const [history, setHistory] = useState([savedElements]);
+  const [strokeColor, setStrokeColor] = useState(initial.prefs.strokeColor);
+  const [strokeWidth, setStrokeWidth] = useState(initial.prefs.strokeWidth);
+  const [zoom, setZoom] = useState(initial.viewport.zoom);
+  const [panOffset, setPanOffset] = useState(initial.viewport.panOffset);
+  const [elements, setElements] = useState(initial.elements);
+  const [history, setHistory] = useState([initial.elements]);
   const [historyStep, setHistoryStep] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
+  const [storageError, setStorageError] = useState(false);
   const canvasRef = useRef(null);
-  // 2. Persist Elements (Debounced by 300ms so drawing freehand doesn't write to disk on every frame)
+  // Writes are debounced so freehand drawing doesn't hit storage every frame.
+  // State is only set inside the timer callback, never synchronously in the effect.
   useEffect(() => {
     const handler = setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEYS.ELEMENTS, JSON.stringify(elements));
-      } catch (err) {
-        console.warn("Storage quota exceeded or error writing elements:", err);
-      }
+      if (!writeJson(STORAGE_KEYS.ELEMENTS, elements)) setStorageError(true);
     }, 300);
     return () => clearTimeout(handler);
   }, [elements]);
-  // 3. Persist Viewport Camera (Debounced by 500ms during active panning/zooming)
+  const viewport = { zoom, panOffset };
+  const prefs = { strokeColor, strokeWidth };
+  const viewportKey = `${zoom}|${panOffset.x}|${panOffset.y}`;
+  const prefsKey = `${strokeColor}|${strokeWidth}`;
   useEffect(() => {
     const handler = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          STORAGE_KEYS.VIEWPORT,
-          JSON.stringify({ zoom, panOffset }),
-        );
-      } catch (err) {
-        console.warn("Error saving viewport:", err);
-      }
+      if (!writeJson(STORAGE_KEYS.VIEWPORT, viewport)) setStorageError(true);
     }, 500);
     return () => clearTimeout(handler);
-  }, [zoom, panOffset]);
-  // 4. Persist User Tool Preferences (Color, Size)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewportKey]);
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEYS.PREFERENCES,
-        JSON.stringify({ strokeColor, strokeWidth }),
-      );
-    } catch (err) {
-      console.warn("Error saving preferences:", err);
-    }
-  }, [strokeColor, strokeWidth]);
-  // Layering
-  const bringForward = (id) => {
-    setElements((prev) => {
-      const idx = prev.findIndex((el) => el.id === id);
-      if (idx < 0 || idx === prev.length - 1) return prev;
-      const copy = [...prev];
-      const [item] = copy.splice(idx, 1);
-      copy.splice(idx + 1, 0, item);
-      return copy;
-    });
+    const handler = setTimeout(() => {
+      if (!writeJson(STORAGE_KEYS.PREFERENCES, prefs)) setStorageError(true);
+    }, 300);
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefsKey]);
+  const dismissStorageError = () => setStorageError(false);
+  // Commits a new element list as one undoable history step
+  const commitElements = useCallback(
+    (newElements) => {
+      setElements(newElements);
+      const next = appendHistory(history, historyStep, newElements);
+      setHistory(next.history);
+      setHistoryStep(next.historyStep);
+    },
+    [history, historyStep],
+  );
+  // Layering (undoable)
+  const moveLayer = (id, direction) => {
+    const reordered = reorderElement(elements, id, direction);
+    if (reordered !== elements) commitElements(reordered);
   };
-  const sendBackward = (id) => {
-    setElements((prev) => {
-      const idx = prev.findIndex((el) => el.id === id);
-      if (idx <= 0) return prev;
-      const copy = [...prev];
-      const [item] = copy.splice(idx, 1);
-      copy.splice(idx - 1, 0, item);
-      return copy;
-    });
-  };
+  const bringForward = (id) => moveLayer(id, "forward");
+  const sendBackward = (id) => moveLayer(id, "backward");
   // History & Undo / Redo
   const undo = () => {
     const previous = navigateHistory(history, historyStep, "undo");
@@ -161,6 +143,9 @@ export function CanvasProvider({ children }) {
         setSelectedId,
         bringForward,
         sendBackward,
+        commitElements,
+        storageError,
+        dismissStorageError,
         canvasRef,
         undo,
         redo,

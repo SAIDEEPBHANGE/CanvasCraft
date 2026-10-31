@@ -1,5 +1,7 @@
 import { Plus, BringToFront, SendToBack } from "lucide-react";
 import { useCanvas } from "../context/useCanvas";
+import { useTheme } from "../context/useTheme";
+import { resolveColor } from "../utils/colors";
 import { DEFAULT_COLORS, STROKE_CONFIG } from "../utils/constants";
 function PropertiesBar() {
   const {
@@ -11,6 +13,10 @@ function PropertiesBar() {
     bringForward,
     sendBackward,
   } = useCanvas();
+  const { theme } = useTheme();
+  // Legacy saved colors (e.g. the old green) map onto the current palette entry.
+  const storedColor = resolveColor(strokeColor, "light");
+  const isPaletteColor = DEFAULT_COLORS.includes(storedColor);
   return (
     <aside
       id="propertiesBar"
@@ -28,22 +34,23 @@ function PropertiesBar() {
               key={color}
               type="button"
               onClick={() => setStrokeColor(color)}
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: resolveColor(color, theme) }}
               aria-label={`Select color ${color}`}
+              aria-pressed={storedColor === color}
               className={`h-5 w-5 shrink-0 rounded-md ring-offset-1 transition-transform hover:scale-110 active:scale-95 dark:ring-offset-slate-900 ${
-                strokeColor === color ? "ring-2 ring-indigo-500" : ""
+                storedColor === color ? "ring-2 ring-indigo-500" : ""
               }`}
             />
           ))}
           <label
             className={`relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed text-slate-500 transition-colors ${
-              !DEFAULT_COLORS.includes(strokeColor)
+              !isPaletteColor
                 ? "border-indigo-500 ring-2 ring-indigo-500"
                 : "border-slate-300 hover:border-slate-500 dark:border-slate-700"
             }`}
             style={{
-              backgroundColor: !DEFAULT_COLORS.includes(strokeColor)
-                ? strokeColor
+              backgroundColor: !isPaletteColor
+                ? resolveColor(strokeColor, theme)
                 : "transparent",
             }}
             title="Custom Color"
@@ -51,13 +58,12 @@ function PropertiesBar() {
             <input
               type="color"
               id="customColorInput"
+              aria-label="Custom color"
               value={strokeColor}
               onChange={(e) => setStrokeColor(e.target.value)}
               className="absolute inset-0 cursor-pointer opacity-0"
             />
-            {DEFAULT_COLORS.includes(strokeColor) && (
-              <Plus className="h-3 w-3" />
-            )}
+            {isPaletteColor && <Plus className="h-3 w-3" />}
           </label>
         </div>
       </div>
@@ -87,6 +93,7 @@ function PropertiesBar() {
               type="button"
               onClick={() => bringForward(selectedId)}
               title="Bring Forward"
+              aria-label="Bring forward"
               className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             >
               <BringToFront className="h-3.5 w-3.5" />
@@ -95,6 +102,7 @@ function PropertiesBar() {
               type="button"
               onClick={() => sendBackward(selectedId)}
               title="Send Backward"
+              aria-label="Send backward"
               className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             >
               <SendToBack className="h-3.5 w-3.5" />

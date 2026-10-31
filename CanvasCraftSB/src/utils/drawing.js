@@ -1,3 +1,5 @@
+import { resolveColor } from "./colors.js";
+
 /**
  * Draws an arrowhead at the tip of a line
  */
@@ -140,14 +142,9 @@ export function renderSelectionBox(ctx, element) {
 /**
  * Renders centered, auto-wrapping text inside rectangle or circle shapes
  */
-function renderCenteredShapeText(ctx, element, bounds) {
+function renderCenteredShapeText(ctx, element, bounds, theme) {
   if (!element.text) return;
-  const isDark = document.documentElement.classList.contains("dark");
-  let textColor = element.strokeColor || "#000000";
-  if (isDark && (textColor === "#000000" || textColor === "#000")) {
-    textColor = "#f8fafc";
-  }
-  ctx.fillStyle = textColor;
+  ctx.fillStyle = resolveColor(element.strokeColor || "#000000", theme, 4.5);
   ctx.font = "15px 'Inter', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -180,7 +177,7 @@ function renderCenteredShapeText(ctx, element, bounds) {
 /**
  * Main render function for canvas elements
  */
-export function renderElement(ctx, element) {
+export function renderElement(ctx, element, theme = "light") {
   const { type, strokeColor, strokeWidth, angle = 0 } = element;
   const bounds = getElementBounds(element);
   ctx.save();
@@ -189,7 +186,7 @@ export function renderElement(ctx, element) {
     ctx.rotate(angle);
     ctx.translate(-bounds.cx, -bounds.cy);
   }
-  ctx.strokeStyle = strokeColor || "#000000";
+  ctx.strokeStyle = resolveColor(strokeColor || "#000000", theme);
   ctx.lineWidth = strokeWidth || 2;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -209,7 +206,7 @@ export function renderElement(ctx, element) {
       ctx.beginPath();
       ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
       ctx.stroke();
-      renderCenteredShapeText(ctx, element, bounds);
+      renderCenteredShapeText(ctx, element, bounds, theme);
       break;
     }
     case "circle": {
@@ -224,7 +221,7 @@ export function renderElement(ctx, element) {
         2 * Math.PI,
       );
       ctx.stroke();
-      renderCenteredShapeText(ctx, element, bounds);
+      renderCenteredShapeText(ctx, element, bounds, theme);
       break;
     }
     case "line": {
@@ -287,11 +284,7 @@ export function renderElement(ctx, element) {
     }
     case "text": {
       if (element.text) {
-        const isDark = document.documentElement.classList.contains("dark");
-        let textColor = strokeColor || "#000000";
-        if (isDark && (textColor === "#000000" || textColor === "#000")) {
-          textColor = "#f8fafc";
-        }
+        const textColor = resolveColor(strokeColor || "#000000", theme, 4.5);
         ctx.fillStyle = textColor;
         ctx.font = "18px 'Inter', sans-serif";
         ctx.textBaseline = "top";
