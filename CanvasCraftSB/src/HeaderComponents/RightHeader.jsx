@@ -8,8 +8,8 @@ import {
   Download,
   Keyboard,
 } from "lucide-react";
-import { useTheme } from "../context/ThemeContext";
-import { useCanvas } from "../context/CanvasContext";
+import { useTheme } from "../context/useTheme";
+import { useCanvas } from "../context/useCanvas";
 import { exportCanvasToPNG } from "../utils/export";
 import ShortcutsModal from "../RightHeaderComponents/ShortcutsModal";
 function RightHeader() {

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TOOLS, STROKE_CONFIG, ZOOM_CONFIG } from "../utils/constants";
-const CanvasContext = createContext();
+import { navigateHistory } from "../utils/history";
+import { CanvasContext } from "./canvasContextValue";
 const STORAGE_KEYS = {
   ELEMENTS: "canvascraft_elements",
   VIEWPORT: "canvascraft_viewport",
@@ -97,20 +98,18 @@ export function CanvasProvider({ children }) {
   };
   // History & Undo / Redo
   const undo = () => {
-    if (historyStep > 0) {
-      const nextStep = historyStep - 1;
-      setHistoryStep(nextStep);
-      setElements(history[nextStep] || []);
-      setSelectedId(null);
-    }
+    const previous = navigateHistory(history, historyStep, "undo");
+    if (!previous) return;
+    setHistoryStep(previous.historyStep);
+    setElements(previous.elements);
+    setSelectedId(null);
   };
   const redo = () => {
-    if (historyStep < history.length - 1) {
-      const nextStep = historyStep + 1;
-      setHistoryStep(nextStep);
-      setElements(history[nextStep] || []);
-      setSelectedId(null);
-    }
+    const next = navigateHistory(history, historyStep, "redo");
+    if (!next) return;
+    setHistoryStep(next.historyStep);
+    setElements(next.elements);
+    setSelectedId(null);
   };
   // Clear Canvas also resets local storage clean
   const clearCanvas = () => {
@@ -174,11 +173,4 @@ export function CanvasProvider({ children }) {
       {children}
     </CanvasContext.Provider>
   );
-}
-export function useCanvas() {
-  const context = useContext(CanvasContext);
-  if (!context) {
-    throw new Error("useCanvas must be used within a CanvasProvider");
-  }
-  return context;
 }

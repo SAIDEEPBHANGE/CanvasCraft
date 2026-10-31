@@ -1,5 +1,5 @@
 import { Plus, BringToFront, SendToBack } from "lucide-react";
-import { useCanvas } from "../context/CanvasContext";
+import { useCanvas } from "../context/useCanvas";
 import { DEFAULT_COLORS, STROKE_CONFIG } from "../utils/constants";
 function PropertiesBar() {
   const {

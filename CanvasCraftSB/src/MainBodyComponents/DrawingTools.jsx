@@ -10,7 +10,7 @@ import {
   StickyNote,
   Eraser,
 } from "lucide-react";
-import { useCanvas } from "../context/CanvasContext";
+import { useCanvas } from "../context/useCanvas";
 import { TOOLS } from "../utils/constants";
 function DrawingTools() {
   const { activeTool, setActiveTool } = useCanvas();

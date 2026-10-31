@@ -1,5 +1,5 @@
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { useCanvas } from "../context/CanvasContext";
+import { useCanvas } from "../context/useCanvas";
 function ZoomFunctions() {
   const { zoom, zoomIn, zoomOut, resetZoom } = useCanvas();
   const btnClass =

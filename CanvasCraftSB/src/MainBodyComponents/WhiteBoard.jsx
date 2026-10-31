@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useCanvas } from "../context/CanvasContext";
+import { useCanvas } from "../context/useCanvas";
 import { TOOLS } from "../utils/constants";
 import { getCanvasCoordinates } from "../utils/coordinates";
+import { appendHistory, navigateHistory } from "../utils/history";
 import {
   renderElement,
   renderSelectionBox,
@@ -9,6 +10,34 @@ import {
   getResizeHandles,
 } from "../utils/drawing";
 import { Check, X } from "lucide-react";
+
+const ERASER_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="%2364748b" stroke-width="1.5"/></svg>') 10 10, crosshair`;
+
+function getToolCursor(tool, actionState) {
+  if (actionState === "panning") return "grabbing";
+  if (actionState === "moving") return "move";
+  if (actionState === "rotating") return "grabbing";
+  if (actionState === "resizing") return "";
+  switch (tool) {
+    case TOOLS.PAN:
+      return "grab";
+    case TOOLS.ERASER:
+      return ERASER_CURSOR;
+    case TOOLS.SELECT:
+      return "default";
+    case TOOLS.PENCIL:
+    case TOOLS.RECTANGLE:
+    case TOOLS.CIRCLE:
+    case TOOLS.LINE:
+    case TOOLS.ARROW:
+    case TOOLS.TEXT:
+    case TOOLS.STICKY:
+      return "crosshair";
+    default:
+      return "default";
+  }
+}
+
 function WhiteBoard() {
   const {
     activeTool,
@@ -33,55 +62,38 @@ function WhiteBoard() {
   const [resizeHandle, setResizeHandle] = useState(null);
   const [currentElement, setCurrentElement] = useState(null);
   const [editingElement, setEditingElement] = useState(null);
-  const [canvasCursor, setCanvasCursor] = useState("default");
+  const [cursorState, setCursorState] = useState(() => ({
+    activeTool,
+    actionState,
+    cursor: getToolCursor(activeTool, actionState),
+  }));
+  if (
+    cursorState.activeTool !== activeTool ||
+    cursorState.actionState !== actionState
+  ) {
+    setCursorState({
+      activeTool,
+      actionState,
+      cursor: getToolCursor(activeTool, actionState),
+    });
+  }
+  const canvasCursor = cursorState.cursor;
+  const setCanvasCursor = (cursor) =>
+    setCursorState({ activeTool, actionState, cursor });
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialElementRef = useRef(null);
   const panStartRef = useRef({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const openTimeRef = useRef(0);
-  // 16px hollow circle cursor for the eraser
-  const ERASER_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="%2364748b" stroke-width="1.5"/></svg>') 10 10, crosshair`;
-  useEffect(() => {
-    setCanvasCursor(getToolCursor(activeTool, actionState));
-  }, [activeTool, actionState]);
-  const getToolCursor = (tool, actionState) => {
-    // Active dragging / panning takes highest priority
-    if (actionState === "panning") return "grabbing";
-    if (actionState === "moving") return "move";
-    if (actionState === "rotating") return "grabbing";
-    if (actionState === "resizing") return ""; // Handled dynamically by handle positions
-    switch (tool) {
-      case TOOLS.PAN:
-        return "grab";
-      case TOOLS.ERASER:
-        return ERASER_CURSOR;
-      case TOOLS.SELECT:
-        return "default";
-      // All creation tools get the precise crosshair (+) cursor
-      case TOOLS.PENCIL:
-      case TOOLS.RECTANGLE:
-      case TOOLS.CIRCLE:
-      case TOOLS.LINE:
-      case TOOLS.ARROW:
-      case TOOLS.TEXT:
-      case TOOLS.STICKY:
-        return "crosshair";
-      default:
-        return "default";
-    }
-  };
   // Commit state changes to Undo/Redo history
   const commitToHistory = useCallback(
     (newElements) => {
       setElements(newElements);
-      setHistory((prev) => {
-        const upToCurrent = prev.slice(0, historyStep + 1);
-        const updated = [...upToCurrent, newElements];
-        setHistoryStep(updated.length - 1);
-        return updated;
-      });
+      const next = appendHistory(history, historyStep, newElements);
+      setHistory(next.history);
+      setHistoryStep(next.historyStep);
     },
-    [setElements, setHistory, setHistoryStep, historyStep],
+    [setElements, setHistory, setHistoryStep, history, historyStep],
   );
   // Focus textarea when editing starts
   useEffect(() => {
@@ -173,31 +185,13 @@ function WhiteBoard() {
       }
       const key = e.key.toLowerCase();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-      if (isCtrlOrCmd && key === "z") {
+      if (isCtrlOrCmd && (key === "z" || key === "y")) {
         e.preventDefault();
-        if (e.shiftKey) {
-          const next = historyStep + 1;
-          if (next < history.length) {
-            setHistoryStep(next);
-            setElements(history[next] || []);
-            setSelectedId(null);
-          }
-        } else {
-          const prev = historyStep - 1;
-          if (prev >= 0) {
-            setHistoryStep(prev);
-            setElements(history[prev] || []);
-            setSelectedId(null);
-          }
-        }
-        return;
-      }
-      if (isCtrlOrCmd && key === "y") {
-        e.preventDefault();
-        const next = historyStep + 1;
-        if (next < history.length) {
-          setHistoryStep(next);
-          setElements(history[next] || []);
+        const direction = key === "y" || e.shiftKey ? "redo" : "undo";
+        const next = navigateHistory(history, historyStep, direction);
+        if (next) {
+          setHistoryStep(next.historyStep);
+          setElements(next.elements);
           setSelectedId(null);
         }
         return;
