@@ -14,13 +14,14 @@
 - **Infinite Workspace (Pan & Zoom):** Viewport camera controls supporting cursor-anchored mouse wheel and trackpad zooming (10% to 500%), smooth hand panning, and HUD zoom buttons.
 - **Vector & Geometric Primitives:** Freehand pencil, rectangle, circle, line, directional arrow, and a non-destructive layer-targeted eraser.
 - **Interactive Text & Sticky Notes:** Live floating text inputs, post-it sticky cards with automatic text wrapping, and centered double-click text embedding inside any shape.
+- **Multiple Selection:** Shift+click, drag a marquee, or press Ctrl/Cmd+A, then move, resize, rotate, recolor, restack, or delete the whole selection as one undo step.
 - **Advanced Object Manipulation:** 8-point interactive resizing handles (`nw`, `ne`, `se`, `sw`, `n`, `s`, `e`, `w`) and smooth radial rotation handles that preserve geometry.
 - **Z-Index Layer Management:** Element stacking order controls with Bring Forward and Send Backward capabilities.
-- **State History & Undo/Redo:** Action tracking stacks supporting unlimited undo/redo traversals through UI actions or keyboard hotkeys.
+- **State History & Undo/Redo:** Action tracking stacks supporting undo/redo traversals (capped at 100 steps) through UI actions or keyboard hotkeys.
 - **Debounced Local Persistence:** Automatic state synchronization to browser `localStorage` ensuring whiteboards restore reliably without frame drops.
-- **Dark & Light Mode:** Theme switcher adjusting floating toolbar glassmorphism styles, canvas dot grids, and stroke contrast.
+- **Dark & Light Mode:** Theme switcher adjusting floating toolbar glassmorphism styles, canvas dot grids, and theme-aware stroke colors that stay readable in both modes.
 - **Global Keyboard Hotkeys:** Single-key tool swapping (<kbd>V</kbd>, <kbd>H</kbd>, <kbd>R</kbd>, <kbd>C</kbd>, <kbd>A</kbd>, <kbd>L</kbd>, <kbd>P</kbd>, <kbd>T</kbd>, <kbd>S</kbd>, <kbd>E</kbd>), selected object removal (<kbd>Delete</kbd> / <kbd>Backspace</kbd>), and history navigation (<kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>).
-- **Timestamped PNG Export:** Clean, off-screen rendered PNG file downloads with auto-generated timestamps (`canvascraft_YYYY-MM-DD_HH-MM.png`).
+- **Export Dialog:** Live preview with background and dark-mode toggles, 1x/2x/3x scale, PNG and SVG downloads with timestamped names (`canvascraft_YYYY-MM-DD_HH-MM.png`), and copy to clipboard. Exports are cropped to the content, or to the selection when one exists.
 
 ---
 
@@ -30,6 +31,7 @@
 - **Styling & HUD:** Tailwind CSS (v4) with responsive utility scaffolding
 - **Rendering:** HTML5 Canvas 2D Context API with custom matrix transformations
 - **Icons:** Lucide React
+- **Testing:** Node's built-in test runner for the pure geometry, history, selection, and export helpers
 - **Storage:** Web Storage API (`localStorage`) with debounced I/O queues
 
 ---
@@ -45,7 +47,7 @@ npm run lint
 npm run build
 ```
 
-Pull requests run the same test, lint, and build checks in GitHub Actions.
+Pull requests run the same test, lint, and build checks in GitHub Actions. The app version lives only in `CanvasCraftSB/package.json`; see [change-log.md](./change-log.md) for release history.
 
 ---
 
