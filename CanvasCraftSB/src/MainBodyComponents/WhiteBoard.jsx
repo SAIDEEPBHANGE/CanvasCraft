@@ -9,9 +9,19 @@ import { navigateHistory } from "../utils/history";
 import {
   renderElement,
   renderSelectionBox,
+  renderMemberOutline,
   getElementBounds,
   getResizeHandles,
 } from "../utils/drawing";
+import {
+  getElementsInRect,
+  getGroupElement,
+  moveElements,
+  resizeBox,
+  rotateElements,
+  scaleElements,
+  toggleId,
+} from "../utils/selection";
 import { Check, X } from "lucide-react";
 
 const ERASER_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="%2364748b" stroke-width="1.5"/></svg>') 10 10, crosshair`;
@@ -59,9 +69,22 @@ function WhiteBoard() {
     commitElements: commitToHistory,
     selectedId,
     setSelectedId,
+    selectedIds,
+    setSelectedIds,
     canvasRef,
   } = useCanvas();
   const { theme } = useTheme();
+  const [marquee, setMarquee] = useState(null);
+  const marqueeBaseRef = useRef([]);
+  const groupDragRef = useRef(null);
+  // The single selected element, or a stand-in box around a multi-selection
+  const activeSelection =
+    selectedIds.length === 1
+      ? (elements.find((el) => el.id === selectedIds[0]) ?? null)
+      : selectedIds.length > 1
+        ? getGroupElement(elements, selectedIds)
+        : null;
+  const isGroup = selectedIds.length > 1;
   const [actionState, setActionState] = useState("none"); // "drawing" | "moving" | "rotating" | "resizing" | "panning"
   const [resizeHandle, setResizeHandle] = useState(null);
   const [currentElement, setCurrentElement] = useState(null);
@@ -135,17 +158,40 @@ function WhiteBoard() {
       renderElement(ctx, currentElement, theme);
     }
     // 3. Draw selection box & resize/rotation handles
-    if (selectedId && activeTool === TOOLS.SELECT && !editingElement) {
-      const selected = elements.find((el) => el.id === selectedId);
-      if (selected) {
-        renderSelectionBox(ctx, selected);
+    if (selectedIds.length > 0 && activeTool === TOOLS.SELECT && !editingElement) {
+      if (selectedIds.length === 1) {
+        const selected = elements.find((el) => el.id === selectedIds[0]);
+        if (selected) renderSelectionBox(ctx, selected);
+      } else {
+        const members = new Set(selectedIds);
+        elements.forEach((el) => {
+          if (members.has(el.id)) renderMemberOutline(ctx, el);
+        });
+        const group = getGroupElement(elements, selectedIds);
+        if (group) renderSelectionBox(ctx, group);
       }
+    }
+    // 4. Draw marquee
+    if (marquee) {
+      ctx.save();
+      ctx.fillStyle = "rgba(99, 102, 241, 0.12)";
+      ctx.strokeStyle = "#6366f1";
+      ctx.lineWidth = 1 / zoom;
+      ctx.setLineDash([4 / zoom, 4 / zoom]);
+      const mx = Math.min(marquee.x1, marquee.x2);
+      const my = Math.min(marquee.y1, marquee.y2);
+      const mw = Math.abs(marquee.x2 - marquee.x1);
+      const mh = Math.abs(marquee.y2 - marquee.y1);
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.strokeRect(mx, my, mw, mh);
+      ctx.restore();
     }
   }, [
     canvasRef,
     elements,
     currentElement,
-    selectedId,
+    selectedIds,
+    marquee,
     activeTool,
     zoom,
     panOffset,
@@ -198,10 +244,17 @@ function WhiteBoard() {
         }
         return;
       }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+      if (isCtrlOrCmd && key === "a") {
         e.preventDefault();
-        const remaining = elements.filter((el) => el.id !== selectedId);
-        commitToHistory(remaining);
+        setActiveTool(TOOLS.SELECT);
+        setSelectedIds(elements.map((el) => el.id));
+        return;
+      }
+      if (isCtrlOrCmd) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.length) {
+        e.preventDefault();
+        const doomed = new Set(selectedIds);
+        commitToHistory(elements.filter((el) => !doomed.has(el.id)));
         setSelectedId(null);
         return;
       }
@@ -261,7 +314,8 @@ function WhiteBoard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     editingElement,
-    selectedId,
+    selectedIds,
+    setSelectedIds,
     elements,
     history,
     historyStep,
@@ -416,6 +470,7 @@ function WhiteBoard() {
         if (actionState === "moving" || actionState === "rotating" || actionState === "resizing") {
           setElements(history[historyStep]);
         }
+        setMarquee(null);
         setCurrentElement(null);
         setActionState("none");
         pinchRef.current = getPinchSnapshot(a, b, zoom, panOffset);
@@ -443,7 +498,7 @@ function WhiteBoard() {
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
     // 1. SELECT TOOL
     if (activeTool === TOOLS.SELECT) {
-      const selected = elements.find((el) => el.id === selectedId);
+      const selected = activeSelection;
       // Check Resize Handles
       if (selected) {
         const handle = getClickedResizeHandle(coords, selected);
@@ -452,25 +507,40 @@ function WhiteBoard() {
           setResizeHandle(handle);
           dragStartRef.current = coords;
           initialElementRef.current = JSON.parse(JSON.stringify(selected));
+          groupDragRef.current = isGroup ? { elements } : null;
           return;
         }
       }
       // Check Rotation Handle
       if (selected && isOverRotationHandle(coords, selected)) {
         setActionState("rotating");
+        if (isGroup) {
+          const b = getElementBounds(selected);
+          groupDragRef.current = {
+            elements,
+            center: { x: b.cx, y: b.cy },
+            startAngle: Math.atan2(coords.y - b.cy, coords.x - b.cx),
+          };
+        }
         return;
       }
       // Hit-test element
       const hit = [...elements]
         .reverse()
         .find((el) => isPointInsideElement(coords, el));
-      if (hit) {
-        setSelectedId(hit.id);
+      if (hit && e.shiftKey) {
+        setSelectedIds(toggleId(selectedIds, hit.id));
+        setActionState("none");
+      } else if (hit) {
+        if (!selectedIds.includes(hit.id)) setSelectedId(hit.id);
         setActionState("moving");
         dragStartRef.current = coords;
       } else {
-        setSelectedId(null);
-        setActionState("none");
+        // Empty space: start a marquee (Shift keeps the current selection)
+        marqueeBaseRef.current = e.shiftKey ? selectedIds : [];
+        if (!e.shiftKey) setSelectedId(null);
+        setMarquee({ x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+        setActionState("marquee");
       }
       return;
     }
@@ -569,23 +639,19 @@ function WhiteBoard() {
     const coords = getCanvasCoordinates(e, canvas, zoom, panOffset);
 
     // Hover cursor feedback in SELECT mode (Works for ALL elements including PENCIL)
-    if (actionState === "none" && activeTool === TOOLS.SELECT && selectedId) {
-      const selected = elements.find((el) => el.id === selectedId);
-      if (selected) {
-        const handle = getClickedResizeHandle(coords, selected);
-        if (handle) {
-          const handles = getResizeHandles(selected);
-          setCanvasCursor(handles[handle]?.cursor || "default");
-          return;
-        }
+    if (actionState === "none" && activeTool === TOOLS.SELECT && activeSelection) {
+      const selected = activeSelection;
+      const handle = getClickedResizeHandle(coords, selected);
+      if (handle) {
+        const handles = getResizeHandles(selected);
+        setCanvasCursor(handles[handle]?.cursor || "default");
+        return;
       }
-      if (selected && isOverRotationHandle(coords, selected)) {
+      if (isOverRotationHandle(coords, selected)) {
         setCanvasCursor("grab");
         return;
       }
-      if (actionState === "none") {
-        setCanvasCursor(getToolCursor(activeTool, actionState));
-      }
+      setCanvasCursor(getToolCursor(activeTool, actionState));
     }
 
     // Panning
@@ -594,6 +660,38 @@ function WhiteBoard() {
         x: e.clientX - panStartRef.current.x,
         y: e.clientY - panStartRef.current.y,
       });
+      return;
+    }
+
+    // Marquee selection
+    if (actionState === "marquee" && marquee) {
+      const nextMarquee = { ...marquee, x2: coords.x, y2: coords.y };
+      setMarquee(nextMarquee);
+      const inside = getElementsInRect(elements, nextMarquee);
+      setSelectedIds([...new Set([...marqueeBaseRef.current, ...inside])]);
+      return;
+    }
+
+    // Group resize / rotate (computed from the snapshot taken on pointer down)
+    if (isGroup && groupDragRef.current && actionState === "resizing") {
+      const orig = initialElementRef.current;
+      const from = { x1: orig.x1, y1: orig.y1, x2: orig.x2, y2: orig.y2 };
+      const to = resizeBox(
+        from,
+        resizeHandle,
+        coords.x - dragStartRef.current.x,
+        coords.y - dragStartRef.current.y,
+      );
+      setElements(
+        scaleElements(groupDragRef.current.elements, selectedIds, from, to),
+      );
+      return;
+    }
+    if (isGroup && groupDragRef.current && actionState === "rotating") {
+      const { elements: snapshot, center, startAngle } = groupDragRef.current;
+      const delta =
+        Math.atan2(coords.y - center.y, coords.x - center.x) - startAngle;
+      setElements(rotateElements(snapshot, selectedIds, center, delta));
       return;
     }
 
@@ -680,30 +778,12 @@ function WhiteBoard() {
       return;
     }
 
-    // Moving
-    if (actionState === "moving" && selectedId) {
+    // Moving (one or many selected elements)
+    if (actionState === "moving" && selectedIds.length > 0) {
       const dx = coords.x - dragStartRef.current.x;
       const dy = coords.y - dragStartRef.current.y;
       dragStartRef.current = coords;
-
-      setElements((prev) =>
-        prev.map((el) => {
-          if (el.id !== selectedId) return el;
-          if (el.type === TOOLS.PENCIL) {
-            return {
-              ...el,
-              points: el.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-            };
-          }
-          return {
-            ...el,
-            x1: el.x1 + dx,
-            y1: el.y1 + dy,
-            x2: el.x2 + dx,
-            y2: el.y2 + dy,
-          };
-        }),
-      );
+      setElements((prev) => moveElements(prev, selectedIds, dx, dy));
       return;
     }
 
@@ -761,6 +841,8 @@ function WhiteBoard() {
         setSelectedId(currentElement.id);
       }
       setCurrentElement(null);
+    } else if (actionState === "marquee") {
+      setMarquee(null);
     } else if (
       actionState === "moving" ||
       actionState === "rotating" ||
@@ -771,6 +853,7 @@ function WhiteBoard() {
     setActionState("none");
     setResizeHandle(null);
     initialElementRef.current = null;
+    groupDragRef.current = null;
   };
   // Double click to edit text or shapes
   const handleDoubleClick = (e) => {

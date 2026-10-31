@@ -6,10 +6,11 @@ import { DEFAULT_COLORS, STROKE_CONFIG } from "../utils/constants";
 function PropertiesBar() {
   const {
     strokeColor,
-    setStrokeColor,
+    changeStrokeColor,
     strokeWidth,
-    setStrokeWidth,
-    selectedId,
+    previewStrokeWidth,
+    commitStrokeWidth,
+    selectedIds,
     bringForward,
     sendBackward,
   } = useCanvas();
@@ -33,7 +34,7 @@ function PropertiesBar() {
             <button
               key={color}
               type="button"
-              onClick={() => setStrokeColor(color)}
+              onClick={() => changeStrokeColor(color)}
               style={{ backgroundColor: resolveColor(color, theme) }}
               aria-label={`Select color ${color}`}
               aria-pressed={storedColor === color}
@@ -60,7 +61,7 @@ function PropertiesBar() {
               id="customColorInput"
               aria-label="Custom color"
               value={strokeColor}
-              onChange={(e) => setStrokeColor(e.target.value)}
+              onChange={(e) => changeStrokeColor(e.target.value)}
               className="absolute inset-0 cursor-pointer opacity-0"
             />
             {isPaletteColor && <Plus className="h-3 w-3" />}
@@ -80,18 +81,25 @@ function PropertiesBar() {
           min={STROKE_CONFIG.MIN_WIDTH}
           max={STROKE_CONFIG.MAX_WIDTH}
           value={strokeWidth}
-          onChange={(e) => setStrokeWidth(Number(e.target.value))}
+          onChange={(e) => previewStrokeWidth(Number(e.target.value))}
+          onPointerUp={commitStrokeWidth}
+          onKeyUp={commitStrokeWidth}
           className="h-1.5 w-14 cursor-pointer accent-indigo-600 dark:accent-indigo-400 sm:w-20 lg:w-32"
         />
       </div>
       {/* Layering Controls (Appears when an element is selected) */}
-      {selectedId && (
+      {selectedIds.length > 0 && (
         <>
           <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 lg:my-1 lg:h-px lg:w-full" />
+          {selectedIds.length > 1 && (
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              {selectedIds.length} selected
+            </span>
+          )}
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => bringForward(selectedId)}
+              onClick={bringForward}
               title="Bring Forward"
               aria-label="Bring forward"
               className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -100,7 +108,7 @@ function PropertiesBar() {
             </button>
             <button
               type="button"
-              onClick={() => sendBackward(selectedId)}
+              onClick={sendBackward}
               title="Send Backward"
               aria-label="Send backward"
               className="flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"

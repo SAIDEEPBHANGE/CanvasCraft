@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TOOLS, ZOOM_CONFIG } from "../utils/constants";
 import { appendHistory, navigateHistory } from "../utils/history";
-import { reorderElement } from "../utils/layering";
+import { reorderElements } from "../utils/layering";
+import { applyStyle } from "../utils/selection";
 import {
   readJson,
   sanitizeElements,
@@ -31,7 +32,13 @@ export function CanvasProvider({ children }) {
   const [elements, setElements] = useState(initial.elements);
   const [history, setHistory] = useState([initial.elements]);
   const [historyStep, setHistoryStep] = useState(0);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  // Single-selection helpers keep one-element code paths simple.
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
+  const setSelectedId = useCallback(
+    (id) => setSelectedIds(id == null ? [] : [id]),
+    [],
+  );
   const [storageError, setStorageError] = useState(false);
   const canvasRef = useRef(null);
   // Writes are debounced so freehand drawing doesn't hit storage every frame.
@@ -71,13 +78,30 @@ export function CanvasProvider({ children }) {
     },
     [history, historyStep],
   );
-  // Layering (undoable)
-  const moveLayer = (id, direction) => {
-    const reordered = reorderElement(elements, id, direction);
+  // Layering (undoable, works for one or many selected elements)
+  const moveLayer = (direction) => {
+    const reordered = reorderElements(elements, selectedIds, direction);
     if (reordered !== elements) commitElements(reordered);
   };
-  const bringForward = (id) => moveLayer(id, "forward");
-  const sendBackward = (id) => moveLayer(id, "backward");
+  const bringForward = () => moveLayer("forward");
+  const sendBackward = () => moveLayer("backward");
+
+  // Color changes apply to the whole selection as a single history step
+  const changeStrokeColor = (color) => {
+    setStrokeColor(color);
+    const styled = applyStyle(elements, selectedIds, { strokeColor: color });
+    if (styled !== elements) commitElements(styled);
+  };
+  // Stroke width previews live while dragging the slider and commits once on release
+  const previewStrokeWidth = (width) => {
+    setStrokeWidth(width);
+    setElements((prev) => applyStyle(prev, selectedIds, { strokeWidth: width }));
+  };
+  const commitStrokeWidth = () => {
+    if (selectedIds.length > 0 && elements !== history[historyStep]) {
+      commitElements(elements);
+    }
+  };
   // History & Undo / Redo
   const undo = () => {
     const previous = navigateHistory(history, historyStep, "undo");
@@ -141,6 +165,11 @@ export function CanvasProvider({ children }) {
         setHistoryStep,
         selectedId,
         setSelectedId,
+        selectedIds,
+        setSelectedIds,
+        changeStrokeColor,
+        previewStrokeWidth,
+        commitStrokeWidth,
         bringForward,
         sendBackward,
         commitElements,

@@ -19,7 +19,10 @@ const SHORTCUT_GROUPS = [
   {
     category: "Editing & Canvas",
     items: [
-      { key: "Del / Backspace", action: "Delete selected item" },
+      { key: "Del / Backspace", action: "Delete selected items" },
+      { key: "Shift + Click", action: "Add/remove from selection" },
+      { key: "Drag on empty space", action: "Marquee select" },
+      { key: "Ctrl + A", action: "Select all" },
       { key: "Ctrl + Z", action: "Undo" },
       { key: "Ctrl + Y", action: "Redo" },
       { key: "Ctrl + Shift + Z", action: "Redo" },

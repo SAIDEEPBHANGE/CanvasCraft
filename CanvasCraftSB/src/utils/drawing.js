@@ -71,6 +71,24 @@ export function getResizeHandles(element, padding = 6) {
     w: { x, y: y + h / 2, cursor: "ew-resize" },
   };
 }
+/**
+ * Draws a thin dashed outline around one member of a multi-selection
+ */
+export function renderMemberOutline(ctx, element) {
+  const bounds = getElementBounds(element);
+  const angle = element.angle || 0;
+  ctx.save();
+  if (angle !== 0) {
+    ctx.translate(bounds.cx, bounds.cy);
+    ctx.rotate(angle);
+    ctx.translate(-bounds.cx, -bounds.cy);
+  }
+  ctx.strokeStyle = "#6366f1";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6);
+  ctx.restore();
+}
 function drawCardRect(ctx, x, y, width, height, radius = 6) {
   ctx.beginPath();
   if (typeof ctx.roundRect === "function") {
