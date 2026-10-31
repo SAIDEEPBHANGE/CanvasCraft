@@ -34,6 +34,21 @@
 
 ---
 
+## Development Checks
+
+Run these commands from the `CanvasCraftSB` directory:
+
+```bash
+npm ci
+npm test
+npm run lint
+npm run build
+```
+
+Pull requests run the same test, lint, and build checks in GitHub Actions.
+
+---
+
 ## Keyboard Shortcuts
 
 | Shortcut                                                 | Action                 |
@@ -48,7 +63,10 @@
 | <kbd>T</kbd> or <kbd>7</kbd>                             | Text Tool              |
 | <kbd>S</kbd> or <kbd>8</kbd>                             | Sticky Note Tool       |
 | <kbd>E</kbd> or <kbd>9</kbd>                             | Eraser Tool            |
-| <kbd>Delete</kbd> / <kbd>Backspace</kbd>                 | Delete Selected Shape  |
+| <kbd>Delete</kbd> / <kbd>Backspace</kbd>                 | Delete Selected Shapes |
+| <kbd>Shift</kbd> + Click                                 | Add/Remove from Selection |
+| Drag on empty space (Select tool)                        | Marquee Select         |
+| <kbd>Ctrl</kbd> + <kbd>A</kbd>                           | Select All             |
 | <kbd>Ctrl</kbd> + <kbd>Z</kbd>                           | Undo                   |
 | <kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl+Shift+Z</kbd> | Redo                   |
 | <kbd>Mouse Wheel</kbd> / <kbd>Pinch</kbd>                | Cursor-Centered Zoom   |
