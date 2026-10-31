@@ -1,0 +1,29 @@
+# CanvasCraft
+
+> CanvasCraft is a free, browser-based interactive whiteboard for sketching, visual brainstorming and diagramming. It runs entirely in the browser with no sign-up; boards are saved to the browser's local storage.
+
+Built with React 19, Vite, Tailwind CSS 4 and the HTML5 2D Canvas API. It is a single-page app, so the whole product lives at one URL.
+
+## Try it
+
+- [CanvasCraft web app](https://canvascraftsb.netlify.app/): open the whiteboard and start drawing.
+
+## Features
+
+- Tools: pencil, rectangle, circle, line, arrow, text, sticky notes and an eraser.
+- Multiple selection: Shift+click, marquee drag, or Ctrl/Cmd+A; group move, resize, rotate, recolor, layer and delete.
+- Infinite workspace with cursor-centered wheel zoom, pinch zoom and hand panning.
+- Undo and redo (up to 100 steps) and automatic local saving.
+- Light and dark themes with theme-aware stroke colors.
+- Export dialog: PNG, SVG or copy to clipboard, with background, dark-mode and 1x/2x/3x scale options.
+- Keyboard shortcuts for every tool (V, H, R, C, A, L, P, T, S, E).
+
+## Documentation
+
+- [README](https://github.com/SAIDEEPBHANGE/CanvasCraft/blob/main/README.md): overview, features, shortcuts and development commands.
+- [Change log](https://github.com/SAIDEEPBHANGE/CanvasCraft/blob/main/change-log.md): release history.
+
+## Optional
+
+- [Source code](https://github.com/SAIDEEPBHANGE/CanvasCraft): repository on GitHub.
+- [Sitemap](https://canvascraftsb.netlify.app/sitemap.xml)

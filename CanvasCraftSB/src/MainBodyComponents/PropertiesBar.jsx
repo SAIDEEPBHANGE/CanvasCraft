@@ -78,6 +78,7 @@ function PropertiesBar() {
         <input
           type="range"
           id="strokeWidth"
+          aria-label="Stroke width"
           min={STROKE_CONFIG.MIN_WIDTH}
           max={STROKE_CONFIG.MAX_WIDTH}
           value={strokeWidth}

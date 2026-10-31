@@ -2,6 +2,21 @@
 
 This log records notable project changes. Entries are in reverse chronological order.
 
+## Version 2.4.1 — 2026-10-31
+
+### Added
+
+- SEO metadata in `index.html`: description, keywords, robots, canonical URL, theme colors, Open Graph and Twitter cards, JSON-LD `WebApplication` data, and fallback content for crawlers without JavaScript.
+- `public/robots.txt`, `public/sitemap.xml`, and `public/llms.txt`.
+- `public/favicon.svg` and `public/og-image.png` (social preview).
+
+### Fixed (from a Lighthouse report)
+
+- Missing meta description (SEO).
+- Viewport no longer blocks zooming (`user-scalable=no` removed); the canvas still handles its own gestures.
+- Stroke width slider now has an accessible name.
+- Canvas workspace container has `role="region"` so its `aria-label` is valid.
+
 ## Version 2.4.0 — 2026-10-31
 
 ### Added

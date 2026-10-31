@@ -2,21 +2,119 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="./src/assets/CanvasCraftSB_ICO.svg"
-    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>CanvasCraft __APP_VERSION__ — Collaborative Whiteboard</title>
+    <meta
+      name="description"
+      content="CanvasCraft is a free, fast, browser-based whiteboard for sketching, diagramming and brainstorming. Draw shapes, arrows and sticky notes, select multiple items, and export to PNG or SVG. No sign-up needed."
+    />
+    <meta
+      name="keywords"
+      content="whiteboard, online whiteboard, canvas, drawing app, diagram, sketch, sticky notes, brainstorming, export PNG, export SVG, React"
+    />
+    <meta name="author" content="Saideep Bhange" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="application-name" content="CanvasCraft" />
+    <meta name="apple-mobile-web-app-title" content="CanvasCraft" />
+    <meta
+      name="theme-color"
+      content="#fdfdfd"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#121212"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="canonical" href="https://canvascraftsb.netlify.app/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CanvasCraft" />
+    <meta property="og:url" content="https://canvascraftsb.netlify.app/" />
+    <meta
+      property="og:title"
+      content="CanvasCraft — Free Online Whiteboard for Sketching and Diagrams"
+    />
+    <meta
+      property="og:description"
+      content="Draw shapes, arrows, text and sticky notes on an infinite canvas. Multi-select, light and dark themes, and PNG/SVG export, right in your browser."
+    />
+    <meta
+      property="og:image"
+      content="https://canvascraftsb.netlify.app/og-image.png"
+    />
+    <meta property="og:image:width" content="1763" />
+    <meta property="og:image:height" content="844" />
+    <meta
+      property="og:image:alt"
+      content="CanvasCraft whiteboard with drawing toolbar and canvas"
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="CanvasCraft — Free Online Whiteboard for Sketching and Diagrams"
+    />
+    <meta
+      name="twitter:description"
+      content="Draw shapes, arrows, text and sticky notes on an infinite canvas. Export to PNG or SVG."
+    />
+    <meta
+      name="twitter:image"
+      content="https://canvascraftsb.netlify.app/og-image.png"
+    />
+
+    <link
+      rel="alternate"
+      type="text/plain"
+      href="/llms.txt"
+      title="LLM-readable site summary"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "CanvasCraft",
+        "url": "https://canvascraftsb.netlify.app/",
+        "description": "A free, browser-based interactive whiteboard for sketching, diagramming and brainstorming with PNG and SVG export.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (modern web browser)",
+        "browserRequirements": "Requires JavaScript and HTML5 canvas support",
+        "image": "https://canvascraftsb.netlify.app/og-image.png",
+        "author": { "@type": "Person", "name": "Saideep Bhange" },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Pencil, rectangle, circle, line and arrow tools",
+          "Text boxes and sticky notes",
+          "Multiple selection with group move, resize and rotate",
+          "Infinite pan and zoom",
+          "Light and dark themes",
+          "Undo and redo",
+          "Export to PNG, SVG or clipboard"
+        ]
+      }
+    </script>
   </head>
   <body
     class="m-0 h-full w-full overflow-hidden p-0 font-sans text-slate-800 touch-none select-none dark:bg-[#121212] dark:text-slate-100"
   >
-    <div id="root" class="h-dvh w-screen overflow-hidden"></div>
+    <div id="root" class="h-dvh w-screen overflow-hidden">
+      <main>
+        <h1>CanvasCraft — Collaborative Whiteboard</h1>
+        <p>
+          CanvasCraft is a free, browser-based whiteboard for sketching,
+          diagramming and brainstorming. Enable JavaScript to start drawing.
+        </p>
+      </main>
+    </div>
+    <noscript>CanvasCraft needs JavaScript to run the whiteboard.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -57,3 +57,14 @@ Validation: `npm test` (49 passing), `npm run lint`, and `npm run build` succeed
 Limits: max 8192px per side and 32M pixels total.
 
 Validation: `npm test` (59 passing), `npm run lint`, and `npm run build` succeed; built title shows `CanvasCraft 2.4.0`. Not browser-tested: dialog layout, clipboard permission flow.
+
+## v2.4.1 — SEO and Lighthouse fixes
+
+| Area | Implementation |
+| :-- | :-- |
+| Metadata | `index.html`: description, robots, canonical, theme-color, Open Graph, Twitter, JSON-LD, no-JS fallback content |
+| Crawler files | `public/robots.txt`, `sitemap.xml`, `llms.txt` |
+| Assets | `public/favicon.svg`, `public/og-image.png` |
+| Accessibility | viewport zoom allowed; slider `aria-label`; canvas wrapper `role="region"` |
+
+Validation: tests (59), lint, and build pass; `dist` contains all the crawler files and the title shows 2.4.1. The site URL `https://canvascraftsb.netlify.app/` is hard-coded in the metadata and public files. Re-run Lighthouse after deploying to confirm scores.

@@ -890,6 +890,7 @@ function WhiteBoard() {
   };
   return (
     <div
+      role="region"
       aria-label="Canvas Workspace"
       style={{ cursor: canvasCursor }}
       className="absolute inset-0 h-full w-full touch-none overflow-hidden bg-[#fdfdfd] bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] bg-size-[24px_24px] dark:bg-[#121212] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)]"
